@@ -1,7 +1,10 @@
 package main
 
-import "github.com/bsach64/goback/cmd"
+import (
+	"github.com/bsach64/goback/chunking"
+)
+
 
 func main() {
-	cmd.Execute()
+  chunking.ChunkFile("example.txt")
 }

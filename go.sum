@@ -1,3 +1,5 @@
+github.com/aclements/go-rabin v0.0.0-20170911142644-d0b643ea1a4c h1:YOZwrMKo75ZYXuNSE59An17ijmi9m3TZooemDbm8bnE=
+github.com/aclements/go-rabin v0.0.0-20170911142644-d0b643ea1a4c/go.mod h1:x5RmfBtNWHpxyhZledMnt/vFb6z5y+fadAiinzuLYpo=
 github.com/cpuguy83/go-md2man/v2 v2.0.4/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
