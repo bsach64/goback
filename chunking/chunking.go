@@ -10,7 +10,7 @@ import (
 	"github.com/aclements/go-rabin/rabin"
 )
 
-// Chunked File --> Many Chunks --> Many Chunks form a pack
+// File --> Many Chunks --> Many Chunks form a pack
 // Pack is finally stored in the backup device
 
 /// Use case for meta data is :
@@ -45,7 +45,6 @@ func ChunkFile(filename string) (File,error) {
     size := 0
     chunker := rabin.NewChunker(rabin.NewTable(rabin.Poly64,256),file,minSize,avgSize,maxSize);
     // Window size <= minSize (256 in this case)-------------^
-    
     for {
       chunk, err := chunker.Next()
       if err == io.EOF {
@@ -56,8 +55,8 @@ func ChunkFile(filename string) (File,error) {
       }
       // instead we should return the slices of file into a buffer
       buffer := make([]byte,chunk)
+      file.ReadAt(buffer,int64(size))
       size += chunk
-      file.ReadAt(buffer,int64(chunk))
       chunk_buffer = append(chunk_buffer,buffer)
   }
     result.file = chunk_buffer
@@ -65,12 +64,12 @@ func ChunkFile(filename string) (File,error) {
     result.meta.file_name = filename
     result.meta.processed_at = time.Now()
     result.meta.size = int64(size)
-    fmt.Println(size)
     return result,nil
 }
 
 
 // Hash each chunk using fnv64 as its fast and low collison 
+// Hashing will avoid chunk duplication
 
 func HashChunks(f File) (map[string][]byte,error){
   chunks := f.file
@@ -78,12 +77,9 @@ func HashChunks(f File) (map[string][]byte,error){
   hash := fnv.New64()
   
   for _,chunk  := range chunks {
-    if len(chunk) == 0{
-      continue
-    }
     hash.Write(chunk)
     hashStr := fmt.Sprintf("%x", hash.Sum64())
-    // fmt.Printf("Len of chunk : %d :: Hash: %s\n",len(chunk),hashStr)
+    //fmt.Printf("Len of chunk : %d :: Hash: %s\n",len(chunk),hashStr)
     hash_map[hashStr] = chunk
     hash.Reset()
   } 
