@@ -2,6 +2,7 @@ package chunking
 
 import (
 	"fmt"
+	"hash/fnv"
 	"io"
 	"os"
 	"time"
@@ -9,17 +10,17 @@ import (
 	"github.com/aclements/go-rabin/rabin"
 )
 
-// Chunked File --> Many Chunked Files --> Pack
+// Chunked File --> Many Chunks --> Many Chunks form a pack
 // Pack is finally stored in the backup device
 
-
 /// Use case for meta data is :
-/// Allows the design of the metadata 
+/// Allows the design of the metadata
 /// to evolve without re-uploading the blobs.
 
 type MetaData struct{
   processed_at time.Time
   file_name string
+  size int64
 }
 
 // File is broken into its meta data and chunks 
@@ -39,13 +40,14 @@ func ChunkFile(filename string) (File,error) {
     const minSize = 512     // Minimum chunk size in bytes
     const avgSize = 2048    // Average chunk size in bytes
     const maxSize = 8192    // Maximum chunk size in bytes
-
+    
     var chunk_buffer [][]byte
+    size := 0
     chunker := rabin.NewChunker(rabin.NewTable(rabin.Poly64,256),file,minSize,avgSize,maxSize);
     // Window size <= minSize (256 in this case)-------------^
-
+    
     for {
-      chunk, err := chunker.Next() 
+      chunk, err := chunker.Next()
       if err == io.EOF {
         break 
       }
@@ -53,16 +55,40 @@ func ChunkFile(filename string) (File,error) {
         return result,fmt.Errorf("error reading chunk: %v", err)
       }
       // instead we should return the slices of file into a buffer
-      buffer := make([]byte, chunk)
-      file.Read(buffer)
+      buffer := make([]byte,chunk)
+      size += chunk
+      file.ReadAt(buffer,int64(chunk))
       chunk_buffer = append(chunk_buffer,buffer)
-      fmt.Println(string(buffer))  
   }
     result.file = chunk_buffer
-
+    
     result.meta.file_name = filename
-    result.meta.processed_at = time.Now() 
+    result.meta.processed_at = time.Now()
+    result.meta.size = int64(size)
+    fmt.Println(size)
     return result,nil
 }
+
+
+// Hash each chunk using fnv64 as its fast and low collison 
+
+func HashChunks(f File) (map[string][]byte,error){
+  chunks := f.file
+  hash_map := make(map[string][]byte)
+  hash := fnv.New64()
+  
+  for _,chunk  := range chunks {
+    if len(chunk) == 0{
+      continue
+    }
+    hash.Write(chunk)
+    hashStr := fmt.Sprintf("%x", hash.Sum64())
+    // fmt.Printf("Len of chunk : %d :: Hash: %s\n",len(chunk),hashStr)
+    hash_map[hashStr] = chunk
+    hash.Reset()
+  } 
+  return hash_map,nil
+}
+
 
 
