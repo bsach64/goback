@@ -17,6 +17,11 @@ import (
 /// Allows the design of the metadata
 /// to evolve without re-uploading the blobs.
 
+
+const minSize = 512     // Minimum chunk size in bytes
+const avgSize = 2048    // Average chunk size in bytes
+const maxSize = 8192    // Maximum chunk size in bytes
+
 type MetaData struct{
   processed_at time.Time
   file_name string
@@ -29,6 +34,7 @@ type File struct{
   file [][]byte
 }
 
+
 func ChunkFile(filename string) (File,error) {
     var result File
     file, err := os.Open(filename)
@@ -37,10 +43,6 @@ func ChunkFile(filename string) (File,error) {
     }
     defer file.Close()
 
-    const minSize = 512     // Minimum chunk size in bytes
-    const avgSize = 2048    // Average chunk size in bytes
-    const maxSize = 8192    // Maximum chunk size in bytes
-    
     var chunk_buffer [][]byte
     size := 0
     chunker := rabin.NewChunker(rabin.NewTable(rabin.Poly64,256),file,minSize,avgSize,maxSize);

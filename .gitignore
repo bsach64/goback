@@ -1,5 +1,2 @@
-*.jpg
-*.txt
-*.bin
 private/*
 tmp/*
