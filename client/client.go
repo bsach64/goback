@@ -10,7 +10,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func connectToServer(user, password, host string) (*ssh.Client, error) {
+func ConnectToServer(user, password, host string) (*ssh.Client, error) {
 	sshConfig := &ssh.ClientConfig{
 		User:            user,
 		Auth:            []ssh.AuthMethod{ssh.Password(password)},
@@ -23,13 +23,7 @@ func connectToServer(user, password, host string) (*ssh.Client, error) {
 	return client, nil
 }
 
-func Upload(f string) {
-	client, err := connectToServer("demo", "password", "127.0.0.1:2022")
-	if err != nil {
-		log.Fatalf("Failed to connect to server: %v", err)
-	}
-	defer client.Close()
-
+func Upload(client *ssh.Client, f string) {
 	sftpClient, err := sftp.NewClient(client)
 	if err != nil {
 		log.Fatalf("Failed to create SFTP client: %v", err)
