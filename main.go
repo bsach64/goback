@@ -1,12 +1,11 @@
 package main
 
 import (
-	// "fmt"
 	"time"
 
 	"github.com/bsach64/goback/client"
 	"github.com/bsach64/goback/server"
-	// "github.com/bsach64/goback/utils"
+	"log"
 )
 
 func main() {
@@ -14,8 +13,12 @@ func main() {
 
 	go server.Listen()
 	time.Sleep(2 * time.Second)
-	client.Upload("example.txt")
-
+	c, err := client.ConnectToServer("demo", "password", "127.0.0.1:2022")
+	if err != nil {
+		log.Fatalf("Failed to connect to server: %v", err)
+	}
+	defer c.Close()
+	client.Upload(c, "example.txt")
 }
 
 // Push this where
