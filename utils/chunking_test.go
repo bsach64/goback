@@ -19,12 +19,12 @@ func walkTestFiles(t *testing.T) filepath.WalkFunc {
 		if err != nil {
 			return err
 		}
-      if !info.IsDir() {
-        t.Run(info.Name(), func(t *testing.T) {
-          testFile(t, path)
-        })    
-      }
-		
+		if !info.IsDir() {
+			t.Run(info.Name(), func(t *testing.T) {
+				testFile(t, path)
+			})
+		}
+
 		return nil
 	}
 }
