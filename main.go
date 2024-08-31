@@ -1,18 +1,22 @@
 package main
 
 import (
-	"fmt"
+	// "fmt"
+	"time"
 
-	"github.com/bsach64/goback/chunking"
+	"github.com/bsach64/goback/client"
+	"github.com/bsach64/goback/server"
+	// "github.com/bsach64/goback/utils"
 )
 
 
 func main() {
-  f, err := chunking.ChunkFile("example.txt")
-  if err!=nil{
-    fmt.Println(err)
-  }
-  chunking.HashChunks(f) 
+  // f, err := utils.ChunkFile("example.txt")
+
+  go server.Listen()
+  time.Sleep(2*time.Second)
+  client.Upload("example.txt")
+  
 }
 
 
