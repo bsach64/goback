@@ -9,7 +9,7 @@ import (
 
 var (
 	clientCmd = &cobra.Command{
-		Use:   "client -u [user] -p [password] -h [host_addr] -f [filepath]",
+		Use:   "client -u [user] -p [password] -H [host_addr] -f [filepath]",
 		Short: "starts a client that connects to [host_addr] and sends [filepath]",
 		Long:  "starts a client that connects to [host_addr] and sends [filepath]",
 		Run:   StartClient,
@@ -36,7 +36,7 @@ func init() {
 	rootCmd.AddCommand(clientCmd)
 	clientCmd.Flags().StringVarP(&clientArgs.user, "user", "u", "demo", "username")
 	clientCmd.Flags().StringVarP(&clientArgs.password, "password", "p", "password", "password")
-	clientCmd.Flags().StringVarP(&clientArgs.host, "host", "h", "127.0.0.1:2022", "host address")
+	clientCmd.Flags().StringVarP(&clientArgs.host, "host", "H", "127.0.0.1:2022", "host address")
 	clientCmd.Flags().StringVarP(&clientArgs.f, "filepath", "f", "", "file path")
 	clientCmd.MarkFlagRequired("filepath")
 }

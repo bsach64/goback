@@ -10,8 +10,11 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func Listen() {
-	privateBytes, err := os.ReadFile("private/id_rsa")
+func Listen(rsa_key string) {
+  if rsa_key==""{
+    rsa_key = "private/id_rsa"
+  }
+	privateBytes, err := os.ReadFile(rsa_key)
 	if err != nil {
 		log.Fatalf("Failed to load private key: %v", err)
 	}
