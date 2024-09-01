@@ -1,10 +1,9 @@
 package main
 
-import "github.com/bsach64/goback/cmd"
-
+import (
+	"github.com/bsach64/goback/cmd"
+)
 
 func main() {
-  cmd.Execute()
+	cmd.Execute()
 }
-
-// Push this where

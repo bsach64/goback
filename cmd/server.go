@@ -11,11 +11,10 @@ var serverCmd = &cobra.Command{
 	Long:  "starts a server",
 	Run: func(cmd *cobra.Command, args []string) {
 		go server.Listen("")
-    select {}
+		select {}
 	},
 }
 
-
-func init(){
-  rootCmd.AddCommand(serverCmd)
+func init() {
+	rootCmd.AddCommand(serverCmd)
 }
