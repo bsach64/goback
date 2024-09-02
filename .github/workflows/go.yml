@@ -17,7 +17,16 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: '1.22.5'
+        
+    - name: Create directory for SSH key
+      run: mkdir -p private
 
+    - name: Generate SSH Key
+      run: ssh-keygen -t rsa -b 4096 -f private/id_rsa -N ""
+      
+    - name : Clean
+      run: go clean -testcache
+      
     - name: Build
       run: go build -v ./...
 

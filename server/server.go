@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -10,8 +11,26 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func Listen() {
-	privateBytes, err := os.ReadFile("private/id_rsa")
+type SFTPServer struct {
+	Host  string
+	Port  int
+	IdRsa string
+}
+
+func New(host, id_rsa string, port int) SFTPServer {
+	return SFTPServer{
+		Host:  host,
+		Port:  port,
+		IdRsa: id_rsa,
+	}
+}
+
+func Listen(s SFTPServer) {
+	rsa_key := s.IdRsa
+	if rsa_key == "" {
+		rsa_key = "private/id_rsa"
+	}
+	privateBytes, err := os.ReadFile(rsa_key)
 	if err != nil {
 		log.Fatalf("Failed to load private key: %v", err)
 	}
@@ -27,13 +46,14 @@ func Listen() {
 	}
 
 	config.AddHostKey(private)
+	addr := fmt.Sprintf("%s:%d", s.Host, s.Port)
 
-	listener, err := net.Listen("tcp", "0.0.0.0:2022")
+	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("Failed to listen on 2022: %v", err)
 	}
 	defer listener.Close()
-	log.Println("SFTP Server listening at 0.0.0.0:2022")
+	log.Println("SFTP Server listening at :", addr)
 
 	for {
 		conn, err := listener.Accept()
@@ -59,6 +79,7 @@ func Listen() {
 
 			channel, requests, err := newChannel.Accept()
 			if err != nil {
+				// failed channel does not kill the server
 				log.Printf("Failed accepting channel: %v", err)
 				continue
 			}
@@ -80,13 +101,17 @@ func Listen() {
 func handleSFTP(channel ssh.Channel) {
 	server, err := sftp.NewServer(channel)
 	if err != nil {
-		log.Printf("Failed SFTP server creation %v", err)
+
+		// Only fatal log that exits the server creation
+		log.Fatalf("Failed SFTP server creation %v", err)
+
 		return
 	}
 	defer server.Close()
 
 	if err := server.Serve(); err == io.EOF {
 		log.Println("SFTP client exited")
+		return
 	} else if err != nil {
 		log.Printf("SFTP failed with error: %v", err)
 	}

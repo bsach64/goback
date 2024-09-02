@@ -23,7 +23,7 @@ func ConnectToServer(user, password, host string) (*ssh.Client, error) {
 	return client, nil
 }
 
-func Upload(client *ssh.Client, f string) {
+func Upload(client *ssh.Client, f string) error {
 	sftpClient, err := sftp.NewClient(client)
 	if err != nil {
 		log.Fatalf("Failed to create SFTP client: %v", err)
@@ -36,14 +36,12 @@ func Upload(client *ssh.Client, f string) {
 	}
 	defer localFile.Close()
 
-	// Ensure the remote directory structure exists
 	remoteDir := "./tmp"
 	err = sftpClient.MkdirAll(remoteDir)
 	if err != nil {
 		log.Fatalf("Failed to create remote directory structure: %v", err)
 	}
 
-	// Create the file on the remote server
 	remoteFilePath := filepath.Join(remoteDir, filepath.Base(f))
 	remoteFile, err := sftpClient.Create(remoteFilePath)
 	if err != nil {
@@ -51,11 +49,11 @@ func Upload(client *ssh.Client, f string) {
 	}
 	defer remoteFile.Close()
 
-	// Copy the local file to the remote file
 	_, err = io.Copy(remoteFile, localFile)
 	if err != nil {
 		log.Fatalf("Failed to copy file: %v", err)
 	}
 
 	log.Printf("File uploaded successfully to %s", remoteFilePath)
+	return nil
 }
