@@ -50,10 +50,6 @@ func testUpload(t *testing.T) {
 		return
 	}
 
-	err = Upload(ssh_client, "../test_files/example.txt")
-	if err != nil {
-		t.Errorf("Test Upload failed : %v", err)
-		return
-	}
+	Upload(ssh_client, "../test_files/example.txt")
 
 }

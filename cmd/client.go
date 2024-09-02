@@ -31,10 +31,8 @@ func StartClient(cmd *cobra.Command, args []string) {
 		log.Fatalf("Failed to connect to server: %v", err)
 	}
 	defer c.Close()
-	err = client.Upload(c, clientArgs.f)
-	if err != nil {
-		log.Fatalf("Failed to upload the file to the server %v", err)
-	}
+	client.Upload(c, clientArgs.f)
+
 }
 
 func init() {

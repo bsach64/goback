@@ -39,7 +39,7 @@ func (c *Client) ConnectToServer(host string) (*ssh.Client, error) {
 
 }
 
-func Upload(client *ssh.Client, f string) error {
+func Upload(client *ssh.Client, f string) {
 	sftpClient, err := sftp.NewClient(client)
 	if err != nil {
 		log.Fatalf("Failed to create SFTP client: %v", err)
@@ -59,7 +59,6 @@ func Upload(client *ssh.Client, f string) error {
 		log.Fatalf("%v", err)
 	}
 
-	return nil
 }
 
 func uploadChunks(sftpClient *sftp.Client, chunks map[string][]byte) error {
