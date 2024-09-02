@@ -24,7 +24,9 @@ var (
 )
 
 func StartClient(cmd *cobra.Command, args []string) {
-	c, err := client.ConnectToServer(clientArgs.user, clientArgs.password, clientArgs.host)
+	user_client := client.NewClient(clientArgs.user, clientArgs.password)
+
+	c, err := user_client.ConnectToServer(clientArgs.host)
 	if err != nil {
 		log.Fatalf("Failed to connect to server: %v", err)
 	}

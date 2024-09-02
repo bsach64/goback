@@ -18,8 +18,8 @@ import (
 /// Allows the design of the metadata
 /// to evolve without re-uploading the blobs.
 
-const minSize = 512  // Minimum chunk size in bytes
-const avgSize = 2048 // Average chunk size in bytes
+const minSize = 2048 // Minimum chunk size in bytes
+const avgSize = 4096 // Average chunk size in bytes
 const maxSize = 8192 // Maximum chunk size in bytes
 
 type MetaData struct {
@@ -74,7 +74,7 @@ func ChunkFile(filename string) (File, error) {
 // Hash each chunk using fnv64 as its fast and low collison
 // Hashing will avoid chunk duplication
 
-func HashChunks(f File) (map[string][]byte, error) {
+func HashChunks(f File) map[string][]byte {
 	chunks := f.file
 	hash_map := make(map[string][]byte)
 	hash := fnv.New64()
@@ -86,5 +86,5 @@ func HashChunks(f File) (map[string][]byte, error) {
 		hash_map[hashStr] = chunk
 		hash.Reset()
 	}
-	return hash_map, nil
+	return hash_map
 }
