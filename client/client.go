@@ -1,59 +1,82 @@
 package client
 
 import (
-	"io"
+	"fmt"
 	"log"
-	"os"
 	"path/filepath"
 
+	"github.com/bsach64/goback/utils"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
 
-func ConnectToServer(user, password, host string) (*ssh.Client, error) {
+type Client struct {
+	user     string
+	password string
+}
+
+func NewClient(user, passwd string) Client {
+
+	return Client{
+		user:     user,
+		password: passwd,
+	}
+
+}
+
+func (c *Client) ConnectToServer(host string) (*ssh.Client, error) {
 	sshConfig := &ssh.ClientConfig{
-		User:            user,
-		Auth:            []ssh.AuthMethod{ssh.Password(password)},
+		User:            c.user,
+		Auth:            []ssh.AuthMethod{ssh.Password(c.password)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
+
 	client, err := ssh.Dial("tcp", host, sshConfig)
 	if err != nil {
 		return nil, err
 	}
 	return client, nil
+
 }
 
-func Upload(client *ssh.Client, f string) error {
+func Upload(client *ssh.Client, f string) {
 	sftpClient, err := sftp.NewClient(client)
 	if err != nil {
 		log.Fatalf("Failed to create SFTP client: %v", err)
 	}
 	defer sftpClient.Close()
 
-	localFile, err := os.Open(f)
-	if err != nil {
-		log.Fatalf("Failed to open local file: %v", err)
-	}
-	defer localFile.Close()
+	file, err := utils.ChunkFile(f)
 
-	remoteDir := "./tmp"
-	err = sftpClient.MkdirAll(remoteDir)
 	if err != nil {
-		log.Fatalf("Failed to create remote directory structure: %v", err)
+		log.Fatalf("Cannot chunk the file %v", err)
 	}
 
-	remoteFilePath := filepath.Join(remoteDir, filepath.Base(f))
-	remoteFile, err := sftpClient.Create(remoteFilePath)
-	if err != nil {
-		log.Fatalf("Failed to create remote file: %v", err)
-	}
-	defer remoteFile.Close()
+	hashed_chunks := utils.HashChunks(file)
 
-	_, err = io.Copy(remoteFile, localFile)
+	err = uploadChunks(sftpClient, hashed_chunks)
 	if err != nil {
-		log.Fatalf("Failed to copy file: %v", err)
+		log.Fatalf("%v", err)
 	}
 
-	log.Printf("File uploaded successfully to %s", remoteFilePath)
+}
+
+func uploadChunks(sftpClient *sftp.Client, chunks map[string][]byte) error {
+	for key, val := range chunks {
+		remoteFilePath := filepath.Join("./tmp", fmt.Sprintf("%s.chunk", key)) // Writes chunks to the remote file from the byte array
+
+		remoteFile, err := sftpClient.Create(remoteFilePath)
+		if err != nil {
+			return err
+		}
+
+		defer remoteFile.Close()
+
+		if _, err := remoteFile.Write(val); err != nil {
+			return err
+		}
+
+		log.Printf("Chunk uploaded successfully to %s", remoteFilePath)
+	}
 	return nil
 }

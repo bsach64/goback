@@ -28,3 +28,4 @@ go build ./...
 
 echo "Tasks completed successfully!"
 
+export PATH=$PATH:$(pwd) 

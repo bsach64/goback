@@ -19,12 +19,9 @@ func TestClient(t *testing.T) {
 }
 
 func testConnection(t *testing.T) {
+	client := NewClient("test_user", "test_password")
 
-	_, err := ConnectToServer(
-		"test_user",
-		"password",
-		"127.0.0.1:2022",
-	)
+	_, err := client.ConnectToServer("127.0.0.1:2022")
 
 	if err != nil {
 		if strings.Contains(err.Error(), "connection refused") {
@@ -40,11 +37,9 @@ func testConnection(t *testing.T) {
 
 func testUpload(t *testing.T) {
 
-	client, err := ConnectToServer(
-		"test_user",
-		"password",
-		"127.0.0.1:2022",
-	)
+	client := NewClient("test_user", "test_password")
+
+	ssh_client, err := client.ConnectToServer("127.0.0.1:2022")
 
 	if err != nil {
 		if strings.Contains(err.Error(), "connection refused") {
@@ -55,10 +50,6 @@ func testUpload(t *testing.T) {
 		return
 	}
 
-	err = Upload(client, "../test_files/example.txt")
-	if err != nil {
-		t.Errorf("Test Upload failed : %v", err)
-		return
-	}
+	Upload(ssh_client, "../test_files/example.txt")
 
 }
