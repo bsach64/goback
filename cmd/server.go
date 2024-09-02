@@ -10,7 +10,8 @@ var serverCmd = &cobra.Command{
 	Short: "starts a server",
 	Long:  "starts a server",
 	Run: func(cmd *cobra.Command, args []string) {
-		go server.Listen("")
+		s := server.New("0.0.0.0", "private/id_rsa", 2022)
+		go server.Listen(s)
 		select {}
 	},
 }
