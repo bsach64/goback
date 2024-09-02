@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
+	"log"
 	"os"
 	"time"
 
@@ -55,7 +56,10 @@ func ChunkFile(filename string) (File, error) {
 		}
 		// instead we should return the slices of file into a buffer
 		buffer := make([]byte, chunk)
-		file.ReadAt(buffer, int64(size))
+		_, err = file.ReadAt(buffer, int64(size))
+		if err != nil {
+			log.Printf("Error while reading the bytes of the file %v", err)
+		}
 		size += chunk
 		chunk_buffer = append(chunk_buffer, buffer)
 	}

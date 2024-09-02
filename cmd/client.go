@@ -29,7 +29,10 @@ func StartClient(cmd *cobra.Command, args []string) {
 		log.Fatalf("Failed to connect to server: %v", err)
 	}
 	defer c.Close()
-	client.Upload(c, clientArgs.f)
+	err = client.Upload(c, clientArgs.f)
+	if err != nil {
+		log.Fatalf("Failed to upload the file to the server %v", err)
+	}
 }
 
 func init() {
@@ -38,5 +41,7 @@ func init() {
 	clientCmd.Flags().StringVarP(&clientArgs.password, "password", "p", "password", "password")
 	clientCmd.Flags().StringVarP(&clientArgs.host, "host", "H", "127.0.0.1:2022", "host address")
 	clientCmd.Flags().StringVarP(&clientArgs.f, "filepath", "f", "", "file path")
-	clientCmd.MarkFlagRequired("filepath")
+	if clientCmd.MarkFlagRequired("filepath") != nil {
+		log.Fatalf("Required flag -f is missing")
+	}
 }
