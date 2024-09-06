@@ -9,7 +9,7 @@ format: tidy
 	gofmt -s -w .
 
 lint: format
-	golangci-lint run ./... || (echo "Lint errors generated..")
+	golangci-lint run ./...
 
 build: lint
 	go build -v .

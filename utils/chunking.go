@@ -23,9 +23,9 @@ const avgSize = 4096 // Average chunk size in bytes
 const maxSize = 8192 // Maximum chunk size in bytes
 
 type MetaData struct {
-	processed_at time.Time
-	file_name    string
-	size         int64
+	processedAt time.Time
+	fileName    string
+	size        int64
 }
 
 // File is broken into its meta data and chunks
@@ -42,7 +42,7 @@ func ChunkFile(filename string) (File, error) {
 	}
 	defer file.Close()
 
-	var chunk_buffer [][]byte
+	var chunkBuffer [][]byte
 	size := 0
 	chunker := rabin.NewChunker(rabin.NewTable(rabin.Poly64, 256), file, minSize, avgSize, maxSize)
 	// Window size <= minSize (256 in this case)-------------^
@@ -61,12 +61,12 @@ func ChunkFile(filename string) (File, error) {
 			log.Printf("Error while reading the bytes of the file %v", err)
 		}
 		size += chunk
-		chunk_buffer = append(chunk_buffer, buffer)
+		chunkBuffer = append(chunkBuffer, buffer)
 	}
-	result.file = chunk_buffer
+	result.file = chunkBuffer
 
-	result.meta.file_name = filename
-	result.meta.processed_at = time.Now()
+	result.meta.fileName = filename
+	result.meta.processedAt = time.Now()
 	result.meta.size = int64(size)
 	return result, nil
 }
@@ -76,15 +76,15 @@ func ChunkFile(filename string) (File, error) {
 
 func HashChunks(f File) map[string][]byte {
 	chunks := f.file
-	hash_map := make(map[string][]byte)
+	hashMap := make(map[string][]byte)
 	hash := fnv.New64()
 
 	for _, chunk := range chunks {
 		hash.Write(chunk)
 		hashStr := fmt.Sprintf("%x", hash.Sum64())
-		//fmt.Printf("Len of chunk : %d :: Hash: %s\n",len(chunk),hashStr)
-		hash_map[hashStr] = chunk
+		// log.Printf("Len of chunk : %d :: Hash: %s\n",len(chunk),hashStr)
+		hashMap[hashStr] = chunk
 		hash.Reset()
 	}
-	return hash_map
+	return hashMap
 }
