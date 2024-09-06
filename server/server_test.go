@@ -1,7 +1,7 @@
 package server
 
 import (
-	"fmt"
+	"log"
 	"net"
 	"os"
 	"testing"
@@ -12,17 +12,22 @@ func TestKey(t *testing.T) {
 	s := New("0.0.0.1", "../private/id_rsa", 2022)
 	_, err := os.Stat(s.IdRsa)
 	if os.IsNotExist(err) {
-		fmt.Println("File does not exist:", s.IdRsa)
+		log.Println("File does not exist:", s.IdRsa)
 		t.Fatalf("ID_RSA file does not exist")
 	} else {
-		fmt.Println("File exists:", s.IdRsa)
+		log.Println("File exists:", s.IdRsa)
 	}
 }
 
 // Test the listen function
 func TestListen(t *testing.T) {
 	s := New("0.0.0.0", "../private/id_rsa", 2022)
-	go Listen(s)
+	go func(s SFTPServer) {
+		err := Listen(s)
+		if err != nil {
+			log.Fatalf("Could not start server: %v\n", err)
+		}
+	}(s)
 	time.Sleep(1 * time.Second)
 	conn, err := net.Dial("tcp", "127.0.0.1:2022")
 	if err != nil {

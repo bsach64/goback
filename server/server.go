@@ -17,27 +17,29 @@ type SFTPServer struct {
 	IdRsa string
 }
 
-func New(host, id_rsa string, port int) SFTPServer {
+func New(host, idRsa string, port int) SFTPServer {
 	return SFTPServer{
 		Host:  host,
 		Port:  port,
-		IdRsa: id_rsa,
+		IdRsa: idRsa,
 	}
 }
 
-func Listen(s SFTPServer) {
-	rsa_key := s.IdRsa
-	if rsa_key == "" {
-		rsa_key = "private/id_rsa"
+func Listen(s SFTPServer) error {
+	rsaKey := s.IdRsa
+	if rsaKey == "" {
+		rsaKey = "private/id_rsa"
 	}
-	privateBytes, err := os.ReadFile(rsa_key)
+	privateBytes, err := os.ReadFile(rsaKey)
 	if err != nil {
-		log.Fatalf("Failed to load private key: %v", err)
+		log.Printf("Failed to load private key: %v\n", err)
+		return err
 	}
 
 	private, err := ssh.ParsePrivateKey(privateBytes)
 	if err != nil {
-		log.Fatalf("Failed to parse private key: %v", err)
+		log.Printf("Failed to parse private key: %v\n", err)
+		return err
 	}
 
 	config := &ssh.ServerConfig{
@@ -50,7 +52,8 @@ func Listen(s SFTPServer) {
 
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
-		log.Fatalf("Failed to listen on 2022: %v", err)
+		log.Printf("Failed to listen on %v: %v\n", s.Port, err)
+		return err
 	}
 	defer listener.Close()
 	log.Println("SFTP Server listening at :", addr)
@@ -58,23 +61,23 @@ func Listen(s SFTPServer) {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Printf("Failed during incoming connection: %v", err)
+			log.Printf("Failed during incoming connection: %v\n", err)
 			continue
 		}
 
 		sshConn, chans, reqs, err := ssh.NewServerConn(conn, config)
 		if err != nil {
-			log.Printf("Failed handshake: %v", err)
+			log.Printf("Failed handshake: %v\n", err)
 			continue
 		}
 
-		log.Printf("New SSH connection from %s (%s)", sshConn.RemoteAddr(), sshConn.ClientVersion())
+		log.Printf("New SSH connection from %s (%s)\n", sshConn.RemoteAddr(), sshConn.ClientVersion())
 		go ssh.DiscardRequests(reqs)
 
 		for newChannel := range chans {
 			if newChannel.ChannelType() != "session" {
 				if newChannel.Reject(ssh.UnknownChannelType, "unknown channel type") != nil {
-					log.Printf("Error while rejecting channel creation")
+					log.Printf("Error while rejecting channel creation\n")
 				}
 				continue
 			}
@@ -82,7 +85,7 @@ func Listen(s SFTPServer) {
 			channel, requests, err := newChannel.Accept()
 			if err != nil {
 				// failed channel does not kill the server
-				log.Printf("Failed accepting channel: %v", err)
+				log.Printf("Failed accepting channel: %v\n", err)
 				continue
 			}
 
@@ -90,12 +93,15 @@ func Listen(s SFTPServer) {
 				for req := range in {
 					if req.Type == "subsystem" && string(req.Payload[4:]) == "sftp" {
 						if req.Reply(true, nil) != nil {
-							log.Printf("Cannot send Reply to the request")
+							log.Printf("Cannot send Reply to the request\n")
 						}
-						handleSFTP(channel)
+						err = handleSFTP(channel)
+						if err != nil {
+							log.Printf("Could not handle SFTP Connection %v\n", err)
+						}
 					} else {
 						if req.Reply(false, nil) != nil {
-							log.Printf("Cannot send Reply to the request")
+							log.Printf("Cannot send Reply to the request\n")
 						}
 					}
 				}
@@ -104,21 +110,17 @@ func Listen(s SFTPServer) {
 	}
 }
 
-func handleSFTP(channel ssh.Channel) {
+func handleSFTP(channel ssh.Channel) error {
 	server, err := sftp.NewServer(channel)
 	if err != nil {
-
-		// Only fatal log that exits the server creation
-		log.Fatalf("Failed SFTP server creation %v", err)
-
-		return
+		return err
 	}
 	defer server.Close()
 
 	if err := server.Serve(); err == io.EOF {
 		log.Println("SFTP client exited")
-		return
 	} else if err != nil {
-		log.Printf("SFTP failed with error: %v", err)
+		return err
 	}
+	return nil
 }

@@ -39,7 +39,7 @@ func (c *Client) ConnectToServer(host string) (*ssh.Client, error) {
 
 }
 
-func Upload(client *ssh.Client, f string) {
+func Upload(client *ssh.Client, f string) error {
 	sftpClient, err := sftp.NewClient(client)
 	if err != nil {
 		log.Fatalf("Failed to create SFTP client: %v", err)
@@ -49,15 +49,16 @@ func Upload(client *ssh.Client, f string) {
 	file, err := utils.ChunkFile(f)
 
 	if err != nil {
-		log.Fatalf("Cannot chunk the file %v", err)
+		return fmt.Errorf("Cannot chunk the file %v because of %v\n", f, err)
 	}
 
-	hashed_chunks := utils.HashChunks(file)
+	hashedChunks := utils.HashChunks(file)
 
-	err = uploadChunks(sftpClient, hashed_chunks)
+	err = uploadChunks(sftpClient, hashedChunks)
 	if err != nil {
-		log.Fatalf("%v", err)
+		return err
 	}
+	return nil
 
 }
 

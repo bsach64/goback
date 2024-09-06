@@ -1,6 +1,7 @@
 package client
 
 import (
+	"log"
 	"strings"
 	"testing"
 
@@ -9,7 +10,12 @@ import (
 
 func TestClient(t *testing.T) {
 	s := server.New("0.0.0.1", "../private/id_rsa", 2022)
-	go server.Listen(s)
+	go func(s server.SFTPServer) {
+		err := server.Listen(s)
+		if err != nil {
+			log.Fatalf("Could not start server: %v\n", err)
+		}
+	}(s)
 	go t.Run("Connection Test", func(t *testing.T) {
 		testConnection(t)
 	})
@@ -50,6 +56,9 @@ func testUpload(t *testing.T) {
 		return
 	}
 
-	Upload(ssh_client, "../test_files/example.txt")
+	err = Upload(ssh_client, "../test_files/example.txt")
+	if err != nil {
+		t.Errorf("%v", err)
+	}
 
 }

@@ -24,14 +24,17 @@ var (
 )
 
 func StartClient(cmd *cobra.Command, args []string) {
-	user_client := client.NewClient(clientArgs.user, clientArgs.password)
+	userClient := client.NewClient(clientArgs.user, clientArgs.password)
 
-	c, err := user_client.ConnectToServer(clientArgs.host)
+	c, err := userClient.ConnectToServer(clientArgs.host)
 	if err != nil {
 		log.Fatalf("Failed to connect to server: %v", err)
 	}
 	defer c.Close()
-	client.Upload(c, clientArgs.f)
+	err = client.Upload(c, clientArgs.f)
+	if err != nil {
+		log.Fatalf("Failed to Upload File %v: %v", clientArgs.f, err)
+	}
 
 }
 
