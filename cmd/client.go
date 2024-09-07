@@ -1,50 +1,117 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/bsach64/goback/client"
+	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 )
 
 var (
-	clientCmd = &cobra.Command{
-		Use:   "client -u [user] -p [password] -H [host_addr] -f [filepath]",
-		Short: "starts a client that connects to [host_addr] and sends [filepath]",
-		Long:  "starts a client that connects to [host_addr] and sends [filepath]",
-		Run:   StartClient,
-	}
-
+	userClient client.Client
 	clientArgs struct {
 		user     string
 		password string
 		host     string
-		f        string
 	}
 )
 
-func StartClient(cmd *cobra.Command, args []string) {
-	userClient := client.NewClient(clientArgs.user, clientArgs.password)
+var clientCmd = &cobra.Command{
+	Use:   "client",
+	Short: "Connect to server and perform actions like upload, list, etc.",
+	Run: func(cmd *cobra.Command, args []string) {
 
-	c, err := userClient.ConnectToServer(clientArgs.host)
-	if err != nil {
-		log.Fatalf("Failed to connect to server: %v", err)
-	}
-	defer c.Close()
-	err = client.Upload(c, clientArgs.f)
-	if err != nil {
-		log.Fatalf("Failed to Upload File %v: %v", clientArgs.f, err)
+		fmt.Println("Connecting to Server...")
+
+		userClient = client.NewClient(clientArgs.user, clientArgs.password)
+
+		c, err := userClient.ConnectToServer(clientArgs.host)
+		if err != nil {
+			log.Fatalf("Failed to connect to server: %v", err)
+		}
+
+		fmt.Println("Connected to Server ! ")
+
+		userClient.SSHClient = c
+
+		defer userClient.SSHClient.Close()
+
+		for {
+			prompt := promptui.Select{
+				Label: "Select Command",
+				Items: []string{"Upload File", "List Directory", "Exit"},
+				Templates: &promptui.SelectTemplates{
+					Active:   "* {{ . | bold | green }}", // Green color for the selected item
+					Inactive: "{{ . }}",
+					Selected: "* {{ . | bold | green }}", // Green color for the selected item
+					Details:  "{{ . }}",
+				},
+			}
+
+			_, result, err := prompt.Run()
+
+			if err != nil {
+				log.Fatalf("Prompt failed %v\n", err)
+			}
+
+			switch result {
+			case "Upload File":
+				filepath, err := promptForFilePath()
+				if err != nil {
+					log.Fatalf("Prompt failed %v\n", err)
+				}
+
+				err = client.Upload(userClient.SSHClient, filepath)
+				if err != nil {
+					log.Fatalf("Failed to upload file: %v", err)
+				} else {
+					fmt.Println("File uploaded successfully.")
+				}
+
+			case "List Directory":
+				listRemoteDir()
+
+			case "Exit":
+				fmt.Println("Exiting client.")
+				return
+			}
+		}
+	},
+}
+
+func promptForFilePath() (string, error) {
+	filePrompt := promptui.Prompt{
+		Default:  "test_files/example.txt",
+		Label:    "Enter File Path",
+		Validate: validateFilePath,
 	}
 
+	filepath, err := filePrompt.Run()
+	if err != nil {
+		return "test_files/example.txt", nil //Currently hardcoded the value but in production this shall be validated
+                                             // Also autocomplete is required
+	}                                        // Maybe its better to change this to bubbletea later
+	return filepath, nil
+}
+
+func validateFilePath(input string) error {
+	if len(input) == 0 {
+		return fmt.Errorf("file path cannot be empty")
+	}
+	return nil
+}
+
+func listRemoteDir() {
+	fmt.Println("ls doesn't work as of now")
 }
 
 func init() {
+	//Persistent flags for subcommands
+	clientCmd.PersistentFlags().StringVarP(&clientArgs.user, "user", "u", "demo", "username")
+	clientCmd.PersistentFlags().StringVarP(&clientArgs.password, "password", "p", "password", "password")
+	clientCmd.PersistentFlags().StringVarP(&clientArgs.host, "host", "H", "127.0.0.1:2022", "host address")
+
 	rootCmd.AddCommand(clientCmd)
-	clientCmd.Flags().StringVarP(&clientArgs.user, "user", "u", "demo", "username")
-	clientCmd.Flags().StringVarP(&clientArgs.password, "password", "p", "password", "password")
-	clientCmd.Flags().StringVarP(&clientArgs.host, "host", "H", "127.0.0.1:2022", "host address")
-	clientCmd.Flags().StringVarP(&clientArgs.f, "filepath", "f", "", "file path")
-	if clientCmd.MarkFlagRequired("filepath") != nil {
-		log.Fatalf("Required flag -f is missing")
-	}
 }
