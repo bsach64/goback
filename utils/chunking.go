@@ -23,15 +23,20 @@ const avgSize = 4096 // Average chunk size in bytes
 const maxSize = 8192 // Maximum chunk size in bytes
 
 type MetaData struct {
-	processedAt time.Time
-	fileName    string
-	size        int64
+	ProcessedAt time.Time
+	FileName    string
+	Size        int64
 }
 
 // File is broken into its meta data and chunks
 type File struct {
-	meta MetaData
-	file [][]byte
+	Meta MetaData
+	File [][]byte
+}
+
+type Chunk struct {
+	Order int
+	Data  []byte
 }
 
 func ChunkFile(filename string) (File, error) {
@@ -63,27 +68,27 @@ func ChunkFile(filename string) (File, error) {
 		size += chunk
 		chunkBuffer = append(chunkBuffer, buffer)
 	}
-	result.file = chunkBuffer
+	result.File = chunkBuffer
 
-	result.meta.fileName = filename
-	result.meta.processedAt = time.Now()
-	result.meta.size = int64(size)
+	result.Meta.FileName = filename
+	result.Meta.ProcessedAt = time.Now()
+	result.Meta.Size = int64(size)
 	return result, nil
 }
 
 // Hash each chunk using fnv64 as its fast and low collison
 // Hashing will avoid chunk duplication
 
-func HashChunks(f File) map[string][]byte {
-	chunks := f.file
-	hashMap := make(map[string][]byte)
+func HashChunks(f File) map[string]Chunk {
+	chunks := f.File
+	hashMap := make(map[string]Chunk)
 	hash := fnv.New64()
 
-	for _, chunk := range chunks {
+	for i, chunk := range chunks {
 		hash.Write(chunk)
 		hashStr := fmt.Sprintf("%x", hash.Sum64())
 		// log.Printf("Len of chunk : %d :: Hash: %s\n",len(chunk),hashStr)
-		hashMap[hashStr] = chunk
+		hashMap[hashStr] = Chunk{i, chunk}
 		hash.Reset()
 	}
 	return hashMap

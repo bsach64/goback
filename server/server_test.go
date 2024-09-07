@@ -36,5 +36,4 @@ func TestListen(t *testing.T) {
 	conn.Close()
 
 	t.Log("SFTP server started and accepted connections successfully")
-
 }

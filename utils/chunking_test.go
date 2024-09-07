@@ -46,7 +46,7 @@ func testFile(t *testing.T, filePath string) {
 		t.Fatalf("Chunking failed: %v", err)
 	}
 
-	if chunkedFile.meta.size != stat.Size() {
-		t.Fatalf("Size not same. Actual Size: %d, Chunked total size: %d", stat.Size(), chunkedFile.meta.size)
+	if chunkedFile.Meta.Size != stat.Size() {
+		t.Fatalf("Size not same. Actual Size: %d, Chunked total size: %d", stat.Size(), chunkedFile.Meta.Size)
 	}
 }
