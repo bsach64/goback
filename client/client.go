@@ -11,8 +11,9 @@ import (
 )
 
 type Client struct {
-	user     string
-	password string
+	user      string
+	password  string
+	SSHClient *ssh.Client
 }
 
 func NewClient(user, passwd string) Client {
