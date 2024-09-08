@@ -15,7 +15,7 @@ var serverCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		prompt := promptui.Select{
 			Label: "Select Command",
-			Items: []string{"Listen", "Log", "Exit"},
+			Items: []string{"Listen", "Log", "Reconstruct", "Exit"},
 			Templates: &promptui.SelectTemplates{
 				Active:   "* {{ . | bold | green }}", // Green color for the selected item
 				Inactive: "{{ . }}",
