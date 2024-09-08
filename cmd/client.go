@@ -65,9 +65,9 @@ var clientCmd = &cobra.Command{
 
 				err = client.Upload(userClient.SSHClient, filepath)
 				if err != nil {
-					log.Fatalf("Failed to upload file: %v", err)
+					log.Fatalf("Failed to upload file %v: %v\n", filepath, err)
 				} else {
-					fmt.Println("File uploaded successfully.")
+					fmt.Printf("File %v uploaded successfully.\n", filepath)
 				}
 
 			case "List Directory":
@@ -91,8 +91,8 @@ func promptForFilePath() (string, error) {
 	filepath, err := filePrompt.Run()
 	if err != nil {
 		return "test_files/example.txt", nil //Currently hardcoded the value but in production this shall be validated
-                                             // Also autocomplete is required
-	}                                        // Maybe its better to change this to bubbletea later
+		// Also autocomplete is required
+	} // Maybe its better to change this to bubbletea later
 	return filepath, nil
 }
 
