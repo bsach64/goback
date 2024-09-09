@@ -27,11 +27,14 @@ You can build the project using `make`. Available commands in the `Makefile` are
 * `format`: Format and tidy the code 
 * `lint`: Lint, format and tidy the code
 * `tidy`: Tidy up dependencies
-* `all`: Execute all of the above commands
 
 To build the project, run:
 ```bash
 make build
+```
+OR
+```bash
+make
 ```
 
 ## Running the Binary
