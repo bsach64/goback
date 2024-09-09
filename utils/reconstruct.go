@@ -2,7 +2,6 @@ package utils
 
 import (
 	"bufio"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -10,16 +9,9 @@ import (
 	"sync"
 )
 
-func Reconstruct(f string) error {
-	filePath := filepath.Join("./.data", f)
-	file, err := os.Open(filePath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
+func Reconstruct(snapshotFile *os.File) ([]byte, error) {
 	chunkFileNames := make([]string, 0)
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(snapshotFile)
 	for scanner.Scan() {
 		nameBytes := scanner.Bytes()
 		chunkFileNames = append(chunkFileNames, string(nameBytes))
@@ -41,8 +33,7 @@ func Reconstruct(f string) error {
 	for _, s := range allData {
 		concatData = append(concatData, s...)
 	}
-	fmt.Printf("Here's File: %v\n %v", f, string(concatData))
-	return nil
+	return concatData, nil
 }
 
 func readChunk(chunkPath string, allData [][]byte) error {

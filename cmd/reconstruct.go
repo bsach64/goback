@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/bsach64/goback/utils"
@@ -42,15 +44,24 @@ func reconstruct(cmd *cobra.Command, args []string) {
 		},
 	}
 
-	_, result, err := prompt.Run()
+	_, fileName, err := prompt.Run()
 	if err != nil {
 		log.Fatalf("Reconstruct prompt failed %v\n", err)
 	}
 
-	err = utils.Reconstruct(result)
+	filePath := filepath.Join("./.data", fileName)
+	file, err := os.Open(filePath)
+	if err != nil {
+		log.Fatalf("Could not open snapshot file: %v\n", err)
+	}
+	defer file.Close()
+
+	byteData, err := utils.Reconstruct(file)
 	if err != nil {
 		log.Fatalf("%v\n", err)
 	}
+
+	fmt.Printf("Here's the reconstructed file:\n%v", string(byteData))
 }
 
 func init() {
