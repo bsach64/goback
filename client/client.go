@@ -85,11 +85,6 @@ func uploadChunks(sftpClient *sftp.Client, chunks map[string]utils.Chunk) error 
 
 		defer remoteFile.Close()
 
-		// Can be condensed into one write call
-		if _, err := remoteFile.Write([]byte(fmt.Sprintf("%v\n", val.Order))); err != nil {
-			return err
-		}
-
 		if _, err := remoteFile.Write(val.Data); err != nil {
 			return err
 		}
@@ -104,7 +99,7 @@ func createSnapshot(sftpClient *sftp.Client, file utils.File, chunks map[string]
 		Filename: file.Meta.FileName,
 		Time:     file.Meta.ProcessedAt.Unix(),
 		Size:     file.Meta.Size,
-		Chunks:   make([]string, 0),
+		Chunks:   make([]utils.ChunkInfo, 0),
 	}
 
 	err := sftpClient.MkdirAll("./.data/snapshots")
@@ -120,8 +115,8 @@ func createSnapshot(sftpClient *sftp.Client, file utils.File, chunks map[string]
 	}
 	defer remoteFile.Close()
 
-	for key := range chunks {
-		snapshot.Chunks = append(snapshot.Chunks, fmt.Sprintf("%s.chunk", key))
+	for key, val := range chunks {
+		snapshot.Chunks = append(snapshot.Chunks, utils.ChunkInfo{FileName: fmt.Sprintf("%s.chunk", key), Order: val.Order})
 	}
 
 	dat, err := json.Marshal(snapshot)
