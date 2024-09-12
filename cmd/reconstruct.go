@@ -1,11 +1,11 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/bsach64/goback/utils"
 	"github.com/manifoldco/promptui"
@@ -20,7 +20,7 @@ var reconstructCmd = &cobra.Command{
 }
 
 func reconstruct(cmd *cobra.Command, args []string) {
-	contents, err := os.ReadDir("./.data")
+	contents, err := os.ReadDir("./.data/snapshots")
 	if err != nil {
 		log.Printf("Could not open Data dir, %v\n", err)
 		return
@@ -28,9 +28,7 @@ func reconstruct(cmd *cobra.Command, args []string) {
 
 	snapshots := make([]string, 0)
 	for _, entry := range contents {
-		if strings.HasSuffix(entry.Name(), ".snapshot") {
-			snapshots = append(snapshots, entry.Name())
-		}
+		snapshots = append(snapshots, entry.Name())
 	}
 
 	prompt := promptui.Select{
@@ -49,14 +47,19 @@ func reconstruct(cmd *cobra.Command, args []string) {
 		log.Fatalf("Reconstruct prompt failed %v\n", err)
 	}
 
-	filePath := filepath.Join("./.data", fileName)
-	file, err := os.Open(filePath)
+	filePath := filepath.Join("./.data/snapshots", fileName)
+	dat, err := os.ReadFile(filePath)
 	if err != nil {
 		log.Fatalf("Could not open snapshot file: %v\n", err)
 	}
-	defer file.Close()
 
-	byteData, err := utils.Reconstruct(file)
+	var snapshot utils.Snapshot
+	err = json.Unmarshal(dat, &snapshot)
+	if err != nil {
+		log.Fatalf("Could not unmarshal snapshot file: %v\n", err)
+	}
+
+	byteData, err := utils.Reconstruct(snapshot)
 	if err != nil {
 		log.Fatalf("%v\n", err)
 	}

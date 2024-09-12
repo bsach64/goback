@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"bufio"
 	"log"
 	"os"
 	"path/filepath"
@@ -9,16 +8,10 @@ import (
 	"sync"
 )
 
-func Reconstruct(snapshotFile *os.File) ([]byte, error) {
-	chunkFileNames := make([]string, 0)
-	scanner := bufio.NewScanner(snapshotFile)
-	for scanner.Scan() {
-		nameBytes := scanner.Bytes()
-		chunkFileNames = append(chunkFileNames, string(nameBytes))
-	}
-	allData := make([][]byte, len(chunkFileNames))
+func Reconstruct(snapshot Snapshot) ([]byte, error) {
+	allData := make([][]byte, len(snapshot.Chunks))
 	var wg sync.WaitGroup
-	for _, name := range chunkFileNames {
+	for _, name := range snapshot.Chunks {
 		wg.Add(1)
 		go func(name string, allData [][]byte) {
 			err := readChunk(name, allData)
