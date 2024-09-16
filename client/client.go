@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -84,11 +85,6 @@ func uploadChunks(sftpClient *sftp.Client, chunks map[string]utils.Chunk) error 
 
 		defer remoteFile.Close()
 
-		// Can be condensed into one write call
-		if _, err := remoteFile.Write([]byte(fmt.Sprintf("%v\n", val.Order))); err != nil {
-			return err
-		}
-
 		if _, err := remoteFile.Write(val.Data); err != nil {
 			return err
 		}
@@ -99,12 +95,19 @@ func uploadChunks(sftpClient *sftp.Client, chunks map[string]utils.Chunk) error 
 }
 
 func createSnapshot(sftpClient *sftp.Client, file utils.File, chunks map[string]utils.Chunk) error {
-	err := sftpClient.MkdirAll("./.data")
+	snapshot := utils.Snapshot{
+		Filename: file.Meta.FileName,
+		Time:     file.Meta.ProcessedAt.Unix(),
+		Size:     file.Meta.Size,
+		Chunks:   make([]utils.ChunkInfo, 0),
+	}
+
+	err := sftpClient.MkdirAll("./.data/snapshots")
 	if err != nil {
 		return err
 	}
 	CleanedFileName := strings.ReplaceAll(file.Meta.FileName, "/", "-")
-	remoteFilePath := filepath.Join("./.data", fmt.Sprintf("(%s)-%v.snapshot", CleanedFileName, file.Meta.ProcessedAt.Unix()))
+	remoteFilePath := filepath.Join("./.data/snapshots", fmt.Sprintf("(%s)-%v.snapshot.json", CleanedFileName, snapshot.Time))
 
 	remoteFile, err := sftpClient.OpenFile(remoteFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
 	if err != nil {
@@ -112,11 +115,18 @@ func createSnapshot(sftpClient *sftp.Client, file utils.File, chunks map[string]
 	}
 	defer remoteFile.Close()
 
-	for key := range chunks {
-		chunkFileName := fmt.Sprintf("%s.chunk\n", key)
-		if _, err := remoteFile.Write([]byte(chunkFileName)); err != nil {
-			return err
-		}
+	for key, val := range chunks {
+		snapshot.Chunks = append(snapshot.Chunks, utils.ChunkInfo{FileName: fmt.Sprintf("%s.chunk", key), Order: val.Order})
+	}
+
+	dat, err := json.Marshal(snapshot)
+	if err != nil {
+		return err
+	}
+
+	_, err = remoteFile.Write(dat)
+	if err != nil {
+		return err
 	}
 
 	log.Printf("Created snapshot for %v.\n", file.Meta.FileName)

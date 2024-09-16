@@ -19,4 +19,4 @@ test: lint
 
 clean:
 	go clean
-	rm .data/*
+	rm -r .data/*
