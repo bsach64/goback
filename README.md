@@ -9,6 +9,18 @@
 - Go 1.22 or higher
 - SSH key for server operations (generate one for yourself)
 
+### Install golanci-lint
+It is necessary to install golanci-lint to run the project.
+
+for linux users:
+```bash
+yay golangci-lint
+```
+Other users:
+```bash
+https://golangci-lint.run/welcome/install/
+```
+
 ### Generating SSH Key
 
 To run the server, you will need a SSH key. Generate it using:
