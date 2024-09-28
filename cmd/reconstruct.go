@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/charmbracelet/huh"
 	"github.com/bsach64/goback/utils"
-	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 )
 
@@ -31,21 +31,20 @@ func reconstruct(cmd *cobra.Command, args []string) {
 		snapshots = append(snapshots, entry.Name())
 	}
 
-	prompt := promptui.Select{
-		Label: "Select Snapshot File",
-		Items: snapshots,
-		Templates: &promptui.SelectTemplates{
-			Active:   "* {{ . | bold | green }}", // Green color for the selected item
-			Inactive: "{{ . }}",
-			Selected: "* {{ . | bold | green }}", // Green color for the selected item
-			Details:  "{{ . }}",
-		},
-	}
-
-	_, fileName, err := prompt.Run()
-	if err != nil {
-		log.Fatalf("Reconstruct prompt failed %v\n", err)
-	}
+	var fileName string
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("Select Snapshot File").
+				Options(huh.NewOptions(snapshots...)...).
+				Value(&fileName),
+			),
+		)
+		
+		err = form.Run()
+		if err != nil {
+			log.Fatalf("Reconstruct prompt failed %v\n", err)
+		}
 
 	filePath := filepath.Join("./.data/snapshots", fileName)
 	dat, err := os.ReadFile(filePath)

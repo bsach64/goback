@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/bsach64/goback/client"
-	"github.com/manifoldco/promptui"
+	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )
 
@@ -39,24 +39,26 @@ var clientCmd = &cobra.Command{
 		defer userClient.SSHClient.Close()
 
 		for {
-			prompt := promptui.Select{
-				Label: "Select Command",
-				Items: []string{"Upload File", "List Directory", "Exit"},
-				Templates: &promptui.SelectTemplates{
-					Active:   "* {{ . | bold | green }}", // Green color for the selected item
-					Inactive: "{{ . }}",
-					Selected: "* {{ . | bold | green }}", // Green color for the selected item
-					Details:  "{{ . }}",
-				},
-			}
-
-			_, result, err := prompt.Run()
+			var selectedOption string
+			form := huh.NewForm(
+				huh.NewGroup(
+					huh.NewSelect[string]().
+						Title("Choose an option:").
+						Options(
+							huh.NewOption("Upload File", "Upload File"),
+							huh.NewOption("List Directory", "List Directory"),
+							huh.NewOption("Exit", "Exit"),
+						).
+						Value(&selectedOption),
+				),
+			)
+			err := form.Run()
 
 			if err != nil {
 				log.Fatalf("Prompt failed %v\n", err)
 			}
 
-			switch result {
+			switch selectedOption {
 			case "Upload File":
 				filepath, err := promptForFilePath()
 				if err != nil {
@@ -82,17 +84,25 @@ var clientCmd = &cobra.Command{
 }
 
 func promptForFilePath() (string, error) {
-	filePrompt := promptui.Prompt{
-		Default:  "test_files/example.txt",
-		Label:    "Enter File Path",
-		Validate: validateFilePath,
-	}
+	var filepath string
+	filePrompt := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Enter File Path:").
+				Prompt("? ").
+				Placeholder("test_files/example.txt").
+				Suggestions([]string{"test_files/example.txt"}).
+				// Default("test_files/example.txt").
+				Validate(validateFilePath).
+				Value(&filepath),
+		),
+	)
 
-	filepath, err := filePrompt.Run()
+	err := filePrompt.Run()
 	if err != nil {
-		return "test_files/example.txt", nil //Currently hardcoded the value but in production this shall be validated
+		return "", err
 		// Also autocomplete is required
-	} // Maybe its better to change this to bubbletea later
+	} 
 	return filepath, nil
 }
 
@@ -108,7 +118,7 @@ func listRemoteDir() {
 }
 
 func init() {
-	//Persistent flags for subcommands
+	// Persistent flags for subcommands
 	clientCmd.PersistentFlags().StringVarP(&clientArgs.user, "user", "u", "demo", "username")
 	clientCmd.PersistentFlags().StringVarP(&clientArgs.password, "password", "p", "password", "password")
 	clientCmd.PersistentFlags().StringVarP(&clientArgs.host, "host", "H", "127.0.0.1:2022", "host address")
