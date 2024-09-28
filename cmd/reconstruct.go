@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/charmbracelet/huh"
 	"github.com/bsach64/goback/utils"
+	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )
 
@@ -38,13 +38,13 @@ func reconstruct(cmd *cobra.Command, args []string) {
 				Title("Select Snapshot File").
 				Options(huh.NewOptions(snapshots...)...).
 				Value(&fileName),
-			),
-		)
-		
-		err = form.Run()
-		if err != nil {
-			log.Fatalf("Reconstruct prompt failed %v\n", err)
-		}
+		),
+	)
+
+	err = form.Run()
+	if err != nil {
+		log.Fatalf("Reconstruct prompt failed %v\n", err)
+	}
 
 	filePath := filepath.Join("./.data/snapshots", fileName)
 	dat, err := os.ReadFile(filePath)

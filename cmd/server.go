@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"github.com/bsach64/goback/server"
+	"github.com/bsach64/goback/utils"
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )
@@ -41,7 +42,21 @@ var serverCmd = &cobra.Command{
 			if err != nil {
 				log.Fatal(err)
 			}
-			s := server.New(ip, "private/id_rsa", 2022)
+			log.Println("Starting mDNS server!")
+			go func(ip net.IP) {
+				server, err := utils.StartmDNSServer([]net.IP{ip}, 2022)
+				if err != nil {
+					log.Fatalf("mDNS server failed: %v\n", err)
+				}
+				defer func() {
+					err = server.Shutdown()
+					if err != nil {
+						log.Fatalf("mDNS Server exited: %v\n", err)
+					}
+				}()
+				select {}
+			}(ip)
+			s := server.New(ip.String(), "private/id_rsa", 2022)
 			err = server.Listen(s)
 			if err != nil {
 				log.Println("Could not listen on server")
@@ -54,10 +69,10 @@ var serverCmd = &cobra.Command{
 	},
 }
 
-func getLocalIP() (string, error) {
+func getLocalIP() (net.IP, error) {
 	interfaces, err := net.Interfaces()
 	if err != nil {
-		return "", err
+		return net.IP{}, err
 	}
 
 	for _, inter := range interfaces {
@@ -71,7 +86,7 @@ func getLocalIP() (string, error) {
 
 		addresses, err := inter.Addrs()
 		if err != nil {
-			return "", err
+			return net.IP{}, err
 		}
 		for _, addr := range addresses {
 			var ip net.IP
@@ -85,10 +100,10 @@ func getLocalIP() (string, error) {
 			if ip == nil || ip.IsLoopback() {
 				continue
 			}
-			return ip.String(), nil
+			return ip, nil
 		}
 	}
-	return "", errors.New("Are you connected to the internet?")
+	return net.IP{}, errors.New("Are you connected to the internet?")
 }
 
 func init() {

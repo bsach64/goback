@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/bsach64/goback/client"
+	"github.com/bsach64/goback/utils"
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )
@@ -14,7 +15,6 @@ var (
 	clientArgs struct {
 		user     string
 		password string
-		host     string
 	}
 )
 
@@ -26,8 +26,16 @@ var clientCmd = &cobra.Command{
 		fmt.Println("Connecting to Server...")
 
 		userClient = client.NewClient(clientArgs.user, clientArgs.password)
+		ip4, ip6, port, err := utils.LookupmDNSService()
+		if err != nil {
+			log.Fatalf("Failed to lookup mDNS entry: %v\n", err)
+		}
+		ip := ip6
+		if ip6 == nil {
+			ip = ip4
+		}
 
-		c, err := userClient.ConnectToServer(clientArgs.host)
+		c, err := userClient.ConnectToServer(fmt.Sprintf("%v:%v", ip.String(), port))
 		if err != nil {
 			log.Fatalf("Failed to connect to server: %v", err)
 		}
@@ -102,7 +110,7 @@ func promptForFilePath() (string, error) {
 	if err != nil {
 		return "", err
 		// Also autocomplete is required
-	} 
+	}
 	return filepath, nil
 }
 
@@ -121,7 +129,6 @@ func init() {
 	// Persistent flags for subcommands
 	clientCmd.PersistentFlags().StringVarP(&clientArgs.user, "user", "u", "demo", "username")
 	clientCmd.PersistentFlags().StringVarP(&clientArgs.password, "password", "p", "password", "password")
-	clientCmd.PersistentFlags().StringVarP(&clientArgs.host, "host", "H", "127.0.0.1:2022", "host address")
 
 	rootCmd.AddCommand(clientCmd)
 }
