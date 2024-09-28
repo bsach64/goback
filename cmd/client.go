@@ -101,9 +101,8 @@ func promptForFilePath() (string, error) {
 	err := filePrompt.Run()
 	if err != nil {
 		return "", err
-		// Currently hardcoded the value but in production this shall be validated
 		// Also autocomplete is required
-	} // Maybe its better to change this to bubbletea later
+	} 
 	return filepath, nil
 }
 
