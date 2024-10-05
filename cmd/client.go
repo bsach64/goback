@@ -2,7 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"log"
+
+	"github.com/charmbracelet/log"
 
 	"github.com/bsach64/goback/client"
 	"github.com/bsach64/goback/utils"
@@ -28,7 +29,7 @@ var clientCmd = &cobra.Command{
 		userClient = client.NewClient(clientArgs.user, clientArgs.password)
 		ip4, ip6, port, err := utils.LookupmDNSService()
 		if err != nil {
-			log.Fatalf("Failed to lookup mDNS entry: %v\n", err)
+			log.Fatal("Failed to lookup mDNS entry:", "err", err)
 		}
 		ip := ip6
 		if ip6 == nil {
@@ -37,7 +38,7 @@ var clientCmd = &cobra.Command{
 
 		c, err := userClient.ConnectToServer(fmt.Sprintf("%v:%v", ip.String(), port))
 		if err != nil {
-			log.Fatalf("Failed to connect to server: %v", err)
+			log.Fatal("Failed to connect to server: %v", err)
 		}
 
 		fmt.Println("Connected to Server ! ")
@@ -63,19 +64,19 @@ var clientCmd = &cobra.Command{
 			err := form.Run()
 
 			if err != nil {
-				log.Fatalf("Prompt failed %v\n", err)
+				log.Fatal("Prompt failed", "err", err)
 			}
 
 			switch selectedOption {
 			case "Upload File":
 				filepath, err := promptForFilePath()
 				if err != nil {
-					log.Fatalf("Prompt failed %v\n", err)
+					log.Error("Prompt failed", "err", err)
 				}
 
 				err = client.Upload(userClient.SSHClient, filepath)
 				if err != nil {
-					log.Fatalf("Failed to upload file %v: %v\n", filepath, err)
+					log.Error("Failed to upload file %v:", "err", filepath, err)
 				} else {
 					fmt.Printf("File %v uploaded successfully.\n", filepath)
 				}
@@ -100,7 +101,6 @@ func promptForFilePath() (string, error) {
 				Prompt("? ").
 				Placeholder("test_files/example.txt").
 				Suggestions([]string{"test_files/example.txt"}).
-				// Default("test_files/example.txt").
 				Validate(validateFilePath).
 				Value(&filepath),
 		),

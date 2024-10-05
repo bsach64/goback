@@ -1,9 +1,10 @@
 package client
 
 import (
-	"log"
 	"strings"
 	"testing"
+
+	"github.com/charmbracelet/log"
 
 	"github.com/bsach64/goback/server"
 )
@@ -13,7 +14,7 @@ func TestClient(t *testing.T) {
 	go func(s server.SFTPServer) {
 		err := server.Listen(s)
 		if err != nil {
-			log.Fatalf("Could not start server: %v\n", err)
+			log.Error("Could not start server:", "err", err)
 		}
 	}(s)
 	go t.Run("Connection Test", func(t *testing.T) {

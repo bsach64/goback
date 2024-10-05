@@ -1,21 +1,22 @@
 package server
 
 import (
-	"log"
 	"net"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/charmbracelet/log"
 )
 
 func TestKey(t *testing.T) {
 	s := New("0.0.0.1", "../private/id_rsa", 2022)
 	_, err := os.Stat(s.IdRsa)
 	if os.IsNotExist(err) {
-		log.Println("File does not exist:", s.IdRsa)
+		log.Info("File does not exist:", s.IdRsa)
 		t.Fatalf("ID_RSA file does not exist")
 	} else {
-		log.Println("File exists:", s.IdRsa)
+		log.Info("File exists:", s.IdRsa)
 	}
 }
 
@@ -25,7 +26,7 @@ func TestListen(t *testing.T) {
 	go func(s SFTPServer) {
 		err := Listen(s)
 		if err != nil {
-			log.Fatalf("Could not start server: %v\n", err)
+			log.Error("Could not start server:", "err", err)
 		}
 	}(s)
 	time.Sleep(1 * time.Second)
