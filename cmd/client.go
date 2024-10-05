@@ -6,7 +6,6 @@ import (
 	"github.com/charmbracelet/log"
 
 	"github.com/bsach64/goback/client"
-	"github.com/bsach64/goback/utils"
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )
@@ -27,16 +26,11 @@ var clientCmd = &cobra.Command{
 		fmt.Println("Connecting to Server...")
 
 		userClient = client.NewClient(clientArgs.user, clientArgs.password)
-		ip4, ip6, port, err := utils.LookupmDNSService()
+		ip, err := promptForIP()
 		if err != nil {
-			log.Fatal("Failed to lookup mDNS entry:", "err", err)
+			log.Fatal("Failed to prompt for IP: %v", err)
 		}
-		ip := ip6
-		if ip6 == nil {
-			ip = ip4
-		}
-
-		c, err := userClient.ConnectToServer(fmt.Sprintf("%v:%v", ip.String(), port))
+		c, err := userClient.ConnectToServer(ip)
 		if err != nil {
 			log.Fatal("Failed to connect to server: %v", err)
 		}
@@ -90,6 +84,25 @@ var clientCmd = &cobra.Command{
 			}
 		}
 	},
+}
+
+func promptForIP() (string, error) {
+	var ip string
+	filePrompt := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Enter Server IP:").
+				Prompt("? ").
+				Placeholder("0.0.0.0:8080").
+				Value(&ip),
+		),
+	)
+
+	err := filePrompt.Run()
+	if err != nil {
+		return "", err
+	}
+	return ip, nil
 }
 
 func promptForFilePath() (string, error) {
