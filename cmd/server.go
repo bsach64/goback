@@ -34,7 +34,7 @@ var serverCmd = &cobra.Command{
 		err := form.Run()
 
 		if err != nil {
-			log.Error("failed", "err", err)
+			log.Fatal("failed", "err", err)
 			// log.Fatal(err)
 		}
 
@@ -43,7 +43,7 @@ var serverCmd = &cobra.Command{
 			ip, err := getLocalIP()
 			if err != nil {
 				// log.Fatal(err)
-				log.Error("failed", "err", err)
+				log.Fatal("failed", "err", err)
 			}
 			log.Info("Starting mDNS server!")
 			go func(ip net.IP) {

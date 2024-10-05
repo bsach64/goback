@@ -29,7 +29,7 @@ var clientCmd = &cobra.Command{
 		userClient = client.NewClient(clientArgs.user, clientArgs.password)
 		ip4, ip6, port, err := utils.LookupmDNSService()
 		if err != nil {
-			log.Error("Failed to lookup mDNS entry:", "err", err)
+			log.Fatal("Failed to lookup mDNS entry:", "err", err)
 		}
 		ip := ip6
 		if ip6 == nil {
@@ -38,7 +38,7 @@ var clientCmd = &cobra.Command{
 
 		c, err := userClient.ConnectToServer(fmt.Sprintf("%v:%v", ip.String(), port))
 		if err != nil {
-			log.Error("Failed to connect to server: %v", err)
+			log.Fatal("Failed to connect to server: %v", err)
 		}
 
 		fmt.Println("Connected to Server ! ")
@@ -64,7 +64,7 @@ var clientCmd = &cobra.Command{
 			err := form.Run()
 
 			if err != nil {
-				log.Error("Prompt failed", "err", err)
+				log.Fatal("Prompt failed", "err", err)
 			}
 
 			switch selectedOption {
@@ -101,7 +101,6 @@ func promptForFilePath() (string, error) {
 				Prompt("? ").
 				Placeholder("test_files/example.txt").
 				Suggestions([]string{"test_files/example.txt"}).
-				// Default("test_files/example.txt").
 				Validate(validateFilePath).
 				Value(&filepath),
 		),
