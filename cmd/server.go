@@ -2,9 +2,10 @@ package cmd
 
 import (
 	"errors"
-	"log"
+	// "log"
 	"net"
 
+	"github.com/charmbracelet/log"
 	"github.com/bsach64/goback/server"
 	"github.com/bsach64/goback/utils"
 	"github.com/charmbracelet/huh"
@@ -33,25 +34,29 @@ var serverCmd = &cobra.Command{
 		err := form.Run()
 
 		if err != nil {
-			log.Fatal(err)
+			log.Error("failed", "err", err)
+			// log.Fatal(err)
 		}
 
 		switch mainOptions {
 		case "Listen":
 			ip, err := getLocalIP()
 			if err != nil {
-				log.Fatal(err)
+				// log.Fatal(err)
+				log.Error("failed", "err", err)
 			}
-			log.Println("Starting mDNS server!")
+			log.Info("Starting mDNS server!")
 			go func(ip net.IP) {
 				server, err := utils.StartmDNSServer([]net.IP{ip}, 2022)
 				if err != nil {
-					log.Fatalf("mDNS server failed: %v\n", err)
+					// log.Fatalf("mDNS server failed: %v\n", err)
+					log.Error("mDNS server failed:", "err", err)
 				}
 				defer func() {
 					err = server.Shutdown()
 					if err != nil {
-						log.Fatalf("mDNS Server exited: %v\n", err)
+						// log.Fatalf("mDNS Server exited: %v\n", err)
+						log.Error("mDNS server failed:", "err", err)
 					}
 				}()
 				select {}
@@ -59,7 +64,7 @@ var serverCmd = &cobra.Command{
 			s := server.New(ip.String(), "private/id_rsa", 2022)
 			err = server.Listen(s)
 			if err != nil {
-				log.Println("Could not listen on server")
+				log.Info("Could not listen on server")
 			}
 		case "Log":
 			//TODO
