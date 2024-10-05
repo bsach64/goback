@@ -54,7 +54,7 @@ func Upload(client *ssh.Client, f string) error {
 	file, err := utils.ChunkFile(f)
 
 	if err != nil {
-		return fmt.Errorf("Cannot chunk the file %v because of", "err", f, err)
+		return fmt.Errorf("Cannot chunk the file %v because of %v", f, err)
 	}
 
 	hashedChunks := utils.HashChunks(file)
