@@ -2,11 +2,9 @@ package cmd
 
 import (
 	"errors"
-	// "github.com/charmbracelet/log"
 	"net"
 
 	"github.com/bsach64/goback/server"
-	"github.com/bsach64/goback/utils"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
@@ -45,22 +43,6 @@ var serverCmd = &cobra.Command{
 				// log.Fatal(err)
 				log.Fatal("failed", "err", err)
 			}
-			log.Info("Starting mDNS server!")
-			go func(ip net.IP) {
-				server, err := utils.StartmDNSServer([]net.IP{ip}, 2022)
-				if err != nil {
-					// log.Error("mDNS server failed:", "err", err)
-					log.Error("mDNS server failed:", "err", err)
-				}
-				defer func() {
-					err = server.Shutdown()
-					if err != nil {
-						// log.Error("mDNS Server exited:", "err", err)
-						log.Error("mDNS server failed:", "err", err)
-					}
-				}()
-				select {}
-			}(ip)
 			s := server.New(ip.String(), "private/id_rsa", 2022)
 			err = server.Listen(s)
 			if err != nil {
