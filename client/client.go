@@ -3,10 +3,11 @@ package client
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/charmbracelet/log"
 
 	"github.com/bsach64/goback/utils"
 	"github.com/pkg/sftp"
@@ -46,14 +47,14 @@ func (c *Client) ConnectToServer(host string) (*ssh.Client, error) {
 func Upload(client *ssh.Client, f string) error {
 	sftpClient, err := sftp.NewClient(client)
 	if err != nil {
-		log.Fatalf("Failed to create SFTP client: %v", err)
+		log.Error("Failed to create SFTP client: %v", err)
 	}
 	defer sftpClient.Close()
 
 	file, err := utils.ChunkFile(f)
 
 	if err != nil {
-		return fmt.Errorf("Cannot chunk the file %v because of %v\n", f, err)
+		return fmt.Errorf("Cannot chunk the file %v because of", "err", f, err)
 	}
 
 	hashedChunks := utils.HashChunks(file)
@@ -89,7 +90,7 @@ func uploadChunks(sftpClient *sftp.Client, chunks map[string]utils.Chunk) error 
 			return err
 		}
 
-		log.Printf("Chunk uploaded successfully to %s", remoteFilePath)
+		log.Info("Chunk uploaded successfully to %s", remoteFilePath)
 	}
 	return nil
 }
@@ -129,6 +130,6 @@ func createSnapshot(sftpClient *sftp.Client, file utils.File, chunks map[string]
 		return err
 	}
 
-	log.Printf("Created snapshot for %v.\n", file.Meta.FileName)
+	log.Info("Created snapshot for %v.\n", file.Meta.FileName)
 	return nil
 }
