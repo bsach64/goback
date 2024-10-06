@@ -25,7 +25,7 @@ func New(host, idRsa string, port int) SFTPServer {
 	}
 }
 
-func Listen(s SFTPServer) error {
+func (s  *SFTPServer) Listen() error {
 	rsaKey := s.IdRsa
 	if rsaKey == "" {
 		rsaKey = "private/id_rsa"

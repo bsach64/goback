@@ -23,7 +23,7 @@ func TestKey(t *testing.T) {
 func TestListen(t *testing.T) {
 	s := New("0.0.0.0", "../private/id_rsa", 2022)
 	go func(s SFTPServer) {
-		err := Listen(s)
+		err := s.Listen()
 		if err != nil {
 			log.Fatalf("Could not start server: %v\n", err)
 		}

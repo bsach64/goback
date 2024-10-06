@@ -1,11 +1,12 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 
 	"github.com/bsach64/goback/client"
-	"github.com/bsach64/goback/utils"
+	"github.com/bsach64/goback/server"
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )
@@ -15,6 +16,7 @@ var (
 	clientArgs struct {
 		user     string
 		password string
+        host string
 	}
 )
 
@@ -24,18 +26,8 @@ var clientCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		fmt.Println("Connecting to Server...")
-
-		userClient = client.NewClient(clientArgs.user, clientArgs.password)
-		ip4, ip6, port, err := utils.LookupmDNSService()
-		if err != nil {
-			log.Fatalf("Failed to lookup mDNS entry: %v\n", err)
-		}
-		ip := ip6
-		if ip6 == nil {
-			ip = ip4
-		}
-
-		c, err := userClient.ConnectToServer(fmt.Sprintf("%v:%v", ip.String(), port))
+        
+		c, err := userClient.ConnectToServer(clientArgs.host)
 		if err != nil {
 			log.Fatalf("Failed to connect to server: %v", err)
 		}
@@ -68,17 +60,48 @@ var clientCmd = &cobra.Command{
 
 			switch selectedOption {
 			case "Upload File":
-				filepath, err := promptForFilePath()
-				if err != nil {
-					log.Fatalf("Prompt failed %v\n", err)
-				}
+                createBackupPayload := []byte("Get Server IP")
+                success, reply, err := c.SendRequest("create-backup",true, createBackupPayload)
+                if err != nil {
+                    log.Fatalf("failed to send %s request: %v","create-backup", err)
+                }
 
-				err = client.Upload(userClient.SSHClient, filepath)
-				if err != nil {
-					log.Fatalf("Failed to upload file %v: %v\n", filepath, err)
-				} else {
-					fmt.Printf("File %v uploaded successfully.\n", filepath)
-				}
+                if success {
+                    var workerNode server.WorkerNode
+                    if err := json.Unmarshal(reply, &workerNode); err != nil {
+                        log.Fatalf("failed to unmarshal response: %v", err)
+                    }
+
+                    //Worker node ip and port 
+                    host := fmt.Sprintf("%s:%d", workerNode.Ip, workerNode.Port)
+                
+                    //Worker node username and password for login
+                    // Will change this to digital signature later
+                    c := client.NewClient(workerNode.SftpUser,workerNode.SftpPass)
+                    
+
+                    //Connect to sftp server i.e worker node 
+                    sftpClient,err := c.ConnectToServer(host)
+                        
+                   
+                    if err!=nil{
+                        log.Fatalf("Cannot connect to worker node")
+                    }
+                    
+                    err = client.Upload(sftpClient,"test_files/example.txt")
+                    
+                    if err!=nil{
+                        log.Fatalf("Cannot upload file to worker node at %s",host)
+                    }
+                    
+                    sftpClient.Close()
+
+
+
+                } else {
+                    fmt.Println("create-backup request failed")
+                }
+
 
 			case "List Directory":
 				listRemoteDir()
@@ -129,6 +152,6 @@ func init() {
 	// Persistent flags for subcommands
 	clientCmd.PersistentFlags().StringVarP(&clientArgs.user, "user", "u", "demo", "username")
 	clientCmd.PersistentFlags().StringVarP(&clientArgs.password, "password", "p", "password", "password")
-
+    clientCmd.PersistentFlags().StringVarP(&clientArgs.host, "host", "H", "127.0.0.1:2022", "host address")
 	rootCmd.AddCommand(clientCmd)
 }
