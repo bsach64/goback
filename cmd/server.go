@@ -38,7 +38,7 @@ var serverCmd = &cobra.Command{
 			if err != nil {
 				log.Fatal(err)
 			}
-            server.NewMaster()
+			server.NewMaster()
 			if err != nil {
 				log.Println("Could not listen on server")
 			}
