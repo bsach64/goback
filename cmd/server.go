@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	// "errors"
+	// "net"
+
 	"github.com/bsach64/goback/server"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/log"
@@ -27,7 +30,7 @@ var serverCmd = &cobra.Command{
 					Value(&mainOptions),
 			),
 		)
-        err := form.Run()
+		err := form.Run()
 
 		if err != nil {
 			log.Fatal("failed", "err", err)
@@ -45,8 +48,8 @@ var serverCmd = &cobra.Command{
 				log.Info("Could not listen on server")
 			}
 
-        case "Worker":
-            
+		case "Worker":
+
 		case "Log":
 			//TODO
 		case "Exit":
@@ -54,6 +57,43 @@ var serverCmd = &cobra.Command{
 		}
 	},
 }
+
+// func getLocalIP() (net.IP, error) {
+// 	interfaces, err := net.Interfaces()
+// 	if err != nil {
+// 		return net.IP{}, err
+// 	}
+
+// 	for _, inter := range interfaces {
+// 		if inter.Flags&net.FlagUp == 0 {
+// 			continue // interface down
+// 		}
+
+// 		if inter.Flags&net.FlagLoopback != 0 {
+// 			continue // Loopback Interface
+// 		}
+
+// 		addresses, err := inter.Addrs()
+// 		if err != nil {
+// 			return net.IP{}, err
+// 		}
+// 		for _, addr := range addresses {
+// 			var ip net.IP
+// 			switch v := addr.(type) {
+// 			case *net.IPNet:
+// 				ip = v.IP
+// 			case *net.IPAddr:
+// 				ip = v.IP
+// 			}
+
+// 			if ip == nil || ip.IsLoopback() {
+// 				continue
+// 			}
+// 			return ip, nil
+// 		}
+// 	}
+// 	return net.IP{}, errors.New("Are you connected to the internet?")
+// }
 
 func init() {
 	rootCmd.AddCommand(serverCmd)

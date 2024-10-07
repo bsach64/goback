@@ -90,7 +90,7 @@ func uploadChunks(sftpClient *sftp.Client, chunks map[string]utils.Chunk) error 
 			return err
 		}
 
-		log.Info("Chunk uploaded successfully to %s", remoteFilePath)
+		log.Info("Chunk uploaded successfully", "chunk", remoteFilePath)
 	}
 	return nil
 }
@@ -130,6 +130,6 @@ func createSnapshot(sftpClient *sftp.Client, file utils.File, chunks map[string]
 		return err
 	}
 
-	log.Info("Created snapshot for %v.\n", file.Meta.FileName)
+	log.Info(fmt.Sprintf("Created snapshot for %v.", file.Meta.FileName))
 	return nil
 }

@@ -69,40 +69,40 @@ var clientCmd = &cobra.Command{
 				success, reply, err := c.SendRequest("create-backup", true, createBackupPayload)
 
 				if err != nil {
-					log.Fatalf("failed to send %s request: %v", "create-backup", err)
+					log.Fatalf("Failed to send %s request: %v", "create-backup", err)
 				}
 
-				if success {
-					var workerNode server.Worker
-					if err := json.Unmarshal(reply, &workerNode); err != nil {
-						log.Fatalf("failed to unmarshal response: %v", err)
-					}
-
-					//Worker node ip and port
-					host := fmt.Sprintf("%s:%d", workerNode.Ip, workerNode.Port)
-
-					//Worker node username and password for login
-					// Will change this to digital signature later
-					c := client.NewClient(workerNode.SftpUser, workerNode.SftpPass)
-
-					//Connect to sftp server i.e worker node
-					sftpClient, err := c.ConnectToServer(host)
-
-					if err != nil {
-						log.Fatalf("Cannot connect to worker node")
-					}
-
-					err = client.Upload(sftpClient, path)
-
-					if err != nil {
-						log.Printf("Cannot upload file to worker node %s at because %s", host, err)
-					}
-
-					sftpClient.Close() //using defer for this doesn't seem to work for some reason
-
-				} else {
-					fmt.Println("create-backup request failed")
+				if !success {
+					fmt.Println("Create Backup request failed")
 				}
+
+				var workerNode server.Worker
+				if err := json.Unmarshal(reply, &workerNode); err != nil {
+					log.Fatalf("failed to unmarshal response: %v", err)
+				}
+
+				//Worker node ip and port
+				host := fmt.Sprintf("%s:%d", workerNode.Ip, workerNode.Port)
+
+				//Worker node username and password for login
+				// Will change this to digital signature later
+				c := client.NewClient(workerNode.SftpUser, workerNode.SftpPass)
+
+				//Connect to sftp server i.e worker node
+				sftpClient, err := c.ConnectToServer(host)
+
+				if err != nil {
+					log.Fatalf("Cannot connect to worker node")
+				}
+
+				err = client.Upload(sftpClient, path)
+
+				if err != nil {
+					log.Printf("Cannot upload file to worker node %s at because %s", host, err)
+				}
+
+				sftpClient.Close()
+				//using defer for this doesn't seem to work for some reason
 
 			case "List Directory":
 				listRemoteDir()
