@@ -57,7 +57,7 @@ func (s *SFTPServer) Listen() error {
 		return err
 	}
 	defer listener.Close()
-	log.Info("Worker Server listening at", "IP",addr)
+	log.Info("Worker Server listening at", "IP", addr)
 
 	for {
 		conn, err := listener.Accept()

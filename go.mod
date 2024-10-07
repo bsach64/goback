@@ -6,7 +6,6 @@ require (
 	github.com/aclements/go-rabin v0.0.0-20170911142644-d0b643ea1a4c
 	github.com/charmbracelet/huh v0.6.0
 	github.com/charmbracelet/log v0.4.0
-	github.com/hashicorp/mdns v1.0.5
 	github.com/pkg/sftp v1.13.6
 	github.com/spf13/cobra v1.8.1
 	golang.org/x/crypto v0.26.0
@@ -33,7 +32,6 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
-	github.com/miekg/dns v1.1.41 // indirect
 	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect

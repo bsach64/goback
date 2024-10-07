@@ -116,25 +116,6 @@ var clientCmd = &cobra.Command{
 	},
 }
 
-func promptForIP() (string, error) {
-	var ip string
-	filePrompt := huh.NewForm(
-		huh.NewGroup(
-			huh.NewInput().
-				Title("Enter Server IP:").
-				Prompt("? ").
-				Placeholder("0.0.0.0:8080").
-				Value(&ip),
-		),
-	)
-
-	err := filePrompt.Run()
-	if err != nil {
-		return "", err
-	}
-	return ip, nil
-}
-
 func promptForFilePath() (string, error) {
 	var filepath string
 	filePrompt := huh.NewForm(
