@@ -12,7 +12,7 @@ import (
 func TestClient(t *testing.T) {
 	s := server.New("0.0.0.1", "../private/id_rsa", 2022)
 	go func(s server.SFTPServer) {
-		err := server.Listen(s)
+		err := s.Listen()
 		if err != nil {
 			log.Error("Could not start server:", "err", err)
 		}

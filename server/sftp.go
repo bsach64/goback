@@ -26,7 +26,7 @@ func New(host, idRsa string, port int) SFTPServer {
 	}
 }
 
-func Listen(s SFTPServer) error {
+func (s *SFTPServer) Listen() error {
 	rsaKey := s.IdRsa
 	if rsaKey == "" {
 		rsaKey = "private/id_rsa"
@@ -57,7 +57,7 @@ func Listen(s SFTPServer) error {
 		return err
 	}
 	defer listener.Close()
-	log.Info("SFTP Server listening at :", addr)
+	log.Info("Worker Server listening at", "IP", addr)
 
 	for {
 		conn, err := listener.Accept()
@@ -72,7 +72,7 @@ func Listen(s SFTPServer) error {
 			continue
 		}
 
-		log.Info("New SSH connection from %s (%s)\n", sshConn.RemoteAddr(), sshConn.ClientVersion())
+		log.Info(fmt.Sprintf("SSH connection request %s - %s ", sshConn.RemoteAddr(), addr))
 		go ssh.DiscardRequests(reqs)
 
 		for newChannel := range chans {

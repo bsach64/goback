@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"errors"
-	"net"
+	// "errors"
+	// "net"
 
 	"github.com/bsach64/goback/server"
 	"github.com/charmbracelet/huh"
@@ -22,6 +22,7 @@ var serverCmd = &cobra.Command{
 					Title("Choose an option:").
 					Options(
 						huh.NewOption("Listen", "Listen"),
+						huh.NewOption("Worker", "Worker"),
 						huh.NewOption("Log", "Log"),
 						huh.NewOption("Reconstruct", "Reconstruct"),
 						huh.NewOption("Exit", "Exit"),
@@ -38,16 +39,17 @@ var serverCmd = &cobra.Command{
 
 		switch mainOptions {
 		case "Listen":
-			ip, err := getLocalIP()
 			if err != nil {
 				// log.Fatal(err)
 				log.Fatal("failed", "err", err)
 			}
-			s := server.New(ip.String(), "private/id_rsa", 2022)
-			err = server.Listen(s)
+			server.NewMaster()
 			if err != nil {
 				log.Info("Could not listen on server")
 			}
+
+		case "Worker":
+
 		case "Log":
 			//TODO
 		case "Exit":
@@ -56,42 +58,42 @@ var serverCmd = &cobra.Command{
 	},
 }
 
-func getLocalIP() (net.IP, error) {
-	interfaces, err := net.Interfaces()
-	if err != nil {
-		return net.IP{}, err
-	}
+// func getLocalIP() (net.IP, error) {
+// 	interfaces, err := net.Interfaces()
+// 	if err != nil {
+// 		return net.IP{}, err
+// 	}
 
-	for _, inter := range interfaces {
-		if inter.Flags&net.FlagUp == 0 {
-			continue // interface down
-		}
+// 	for _, inter := range interfaces {
+// 		if inter.Flags&net.FlagUp == 0 {
+// 			continue // interface down
+// 		}
 
-		if inter.Flags&net.FlagLoopback != 0 {
-			continue // Loopback Interface
-		}
+// 		if inter.Flags&net.FlagLoopback != 0 {
+// 			continue // Loopback Interface
+// 		}
 
-		addresses, err := inter.Addrs()
-		if err != nil {
-			return net.IP{}, err
-		}
-		for _, addr := range addresses {
-			var ip net.IP
-			switch v := addr.(type) {
-			case *net.IPNet:
-				ip = v.IP
-			case *net.IPAddr:
-				ip = v.IP
-			}
+// 		addresses, err := inter.Addrs()
+// 		if err != nil {
+// 			return net.IP{}, err
+// 		}
+// 		for _, addr := range addresses {
+// 			var ip net.IP
+// 			switch v := addr.(type) {
+// 			case *net.IPNet:
+// 				ip = v.IP
+// 			case *net.IPAddr:
+// 				ip = v.IP
+// 			}
 
-			if ip == nil || ip.IsLoopback() {
-				continue
-			}
-			return ip, nil
-		}
-	}
-	return net.IP{}, errors.New("Are you connected to the internet?")
-}
+// 			if ip == nil || ip.IsLoopback() {
+// 				continue
+// 			}
+// 			return ip, nil
+// 		}
+// 	}
+// 	return net.IP{}, errors.New("Are you connected to the internet?")
+// }
 
 func init() {
 	rootCmd.AddCommand(serverCmd)
