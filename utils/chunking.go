@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
-	"log"
 	"os"
 	"time"
+
+	"github.com/charmbracelet/log"
 
 	"github.com/aclements/go-rabin/rabin"
 )
@@ -63,7 +64,7 @@ func ChunkFile(filename string) (File, error) {
 		buffer := make([]byte, chunk)
 		_, err = file.ReadAt(buffer, int64(size))
 		if err != nil {
-			log.Printf("Error while reading the bytes of the file %v", err)
+			log.Info("Error while reading the bytes of the file %v", err)
 		}
 		size += chunk
 		chunkBuffer = append(chunkBuffer, buffer)
@@ -87,7 +88,7 @@ func HashChunks(f File) map[string]Chunk {
 	for i, chunk := range chunks {
 		hash.Write(chunk)
 		hashStr := fmt.Sprintf("%x", hash.Sum64())
-		// log.Printf("Len of chunk : %d :: Hash: %s\n",len(chunk),hashStr)
+		// log.Info("Len of chunk : %d :: Hash: %s\n",len(chunk),hashStr)
 		hashMap[hashStr] = Chunk{i, chunk}
 		hash.Reset()
 	}

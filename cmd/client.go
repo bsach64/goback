@@ -3,7 +3,8 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+
+	"github.com/charmbracelet/log"
 
 	"github.com/bsach64/goback/client"
 	"github.com/bsach64/goback/server"
@@ -29,7 +30,7 @@ var clientCmd = &cobra.Command{
 
 		c, err := userClient.ConnectToServer(clientArgs.host)
 		if err != nil {
-			log.Fatalf("Failed to connect to server: %v", err)
+			log.Fatal("Failed to connect to server: %v", err)
 		}
 
 		fmt.Println("Connected to Server ! ")
@@ -53,7 +54,7 @@ var clientCmd = &cobra.Command{
 			err := form.Run()
 
 			if err != nil {
-				log.Fatalf("Prompt failed %v\n", err)
+				log.Fatal("Prompt failed", "err", err)
 			}
 
 			switch selectedOption {
@@ -61,7 +62,7 @@ var clientCmd = &cobra.Command{
 				path, err := promptForFilePath()
 
 				if err != nil {
-					log.Fatalf("Error while reading file path")
+					log.Error("Prompt failed", "err", err)
 				}
 
 				createBackupPayload := []byte("Get Server IP")
@@ -115,6 +116,25 @@ var clientCmd = &cobra.Command{
 	},
 }
 
+func promptForIP() (string, error) {
+	var ip string
+	filePrompt := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Enter Server IP:").
+				Prompt("? ").
+				Placeholder("0.0.0.0:8080").
+				Value(&ip),
+		),
+	)
+
+	err := filePrompt.Run()
+	if err != nil {
+		return "", err
+	}
+	return ip, nil
+}
+
 func promptForFilePath() (string, error) {
 	var filepath string
 	filePrompt := huh.NewForm(
@@ -124,7 +144,6 @@ func promptForFilePath() (string, error) {
 				Prompt("? ").
 				Placeholder("test_files/example.txt").
 				Suggestions([]string{"test_files/example.txt"}).
-				// Default("test_files/example.txt").
 				Validate(validateFilePath).
 				Value(&filepath),
 		),

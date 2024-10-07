@@ -1,10 +1,11 @@
 package utils
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/charmbracelet/log"
 )
 
 func Reconstruct(snapshot Snapshot) ([]byte, error) {
@@ -15,7 +16,7 @@ func Reconstruct(snapshot Snapshot) ([]byte, error) {
 		go func(info ChunkInfo, allData [][]byte) {
 			err := readChunk(info, allData)
 			if err != nil {
-				log.Fatalf("Could not read chunk %v, error: %v\n", info.FileName, err)
+				log.Error("Could not read chunk %v, error:", "err", info.FileName, err)
 			}
 			wg.Done()
 		}(info, allData)
@@ -30,7 +31,7 @@ func Reconstruct(snapshot Snapshot) ([]byte, error) {
 
 func readChunk(chunkInfo ChunkInfo, allData [][]byte) error {
 	filePath := filepath.Join("./.data", chunkInfo.FileName)
-	log.Printf("Opening Chunk %v\n", filePath)
+	log.Info("Opening Chunk", "err", filePath)
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return err

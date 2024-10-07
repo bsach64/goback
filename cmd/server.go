@@ -1,10 +1,9 @@
 package cmd
 
 import (
-	"log"
-
 	"github.com/bsach64/goback/server"
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 )
 
@@ -30,17 +29,19 @@ var serverCmd = &cobra.Command{
 		err := form.Run()
 
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("failed", "err", err)
+			// log.Fatal(err)
 		}
 
 		switch mainOptions {
 		case "Listen":
 			if err != nil {
-				log.Fatal(err)
+				// log.Fatal(err)
+				log.Fatal("failed", "err", err)
 			}
 			server.NewMaster()
 			if err != nil {
-				log.Println("Could not listen on server")
+				log.Info("Could not listen on server")
 			}
 		case "Log":
 			//TODO

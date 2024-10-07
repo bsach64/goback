@@ -3,9 +3,10 @@ package server
 import (
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"os"
+
+	"github.com/charmbracelet/log"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
@@ -32,13 +33,13 @@ func (s *SFTPServer) Listen() error {
 	}
 	privateBytes, err := os.ReadFile(rsaKey)
 	if err != nil {
-		log.Printf("Failed to load private key: %v\n", err)
+		log.Info("Failed to load private key:", "err", err)
 		return err
 	}
 
 	private, err := ssh.ParsePrivateKey(privateBytes)
 	if err != nil {
-		log.Printf("Failed to parse private key: %v\n", err)
+		log.Info("Failed to parse private key:", "err", err)
 		return err
 	}
 
@@ -52,22 +53,22 @@ func (s *SFTPServer) Listen() error {
 
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
-		log.Printf("Failed to listen on %v: %v\n", s.Port, err)
+		log.Info("Failed to listen on %v:", "err", s.Port, err)
 		return err
 	}
 	defer listener.Close()
-	log.Println("Worker Server listening at :", addr)
+	log.Info("Worker Server listening at", "IP",addr)
 
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Printf("Failed during incoming connection: %v\n", err)
+			log.Info("Failed during incoming connection:", "err", err)
 			continue
 		}
 
 		sshConn, chans, reqs, err := ssh.NewServerConn(conn, config)
 		if err != nil {
-			log.Printf("Failed handshake: %v\n", err)
+			log.Info("Failed handshake:", "err", err)
 			continue
 		}
 
@@ -77,7 +78,7 @@ func (s *SFTPServer) Listen() error {
 		for newChannel := range chans {
 			if newChannel.ChannelType() != "session" {
 				if newChannel.Reject(ssh.UnknownChannelType, "unknown channel type") != nil {
-					log.Printf("Error while rejecting channel creation\n")
+					log.Info("Error while rejecting channel creation\n")
 				}
 				continue
 			}
@@ -85,7 +86,7 @@ func (s *SFTPServer) Listen() error {
 			channel, requests, err := newChannel.Accept()
 			if err != nil {
 				// failed channel does not kill the server
-				log.Printf("Failed accepting channel: %v\n", err)
+				log.Info("Failed accepting channel:", "err", err)
 				continue
 			}
 
@@ -93,15 +94,15 @@ func (s *SFTPServer) Listen() error {
 				for req := range in {
 					if req.Type == "subsystem" && string(req.Payload[4:]) == "sftp" {
 						if req.Reply(true, nil) != nil {
-							log.Printf("Cannot send Reply to the request\n")
+							log.Info("Cannot send Reply to the request\n")
 						}
 						err = handleSFTP(channel)
 						if err != nil {
-							log.Printf("Could not handle SFTP Connection %v\n", err)
+							log.Info("Could not handle SFTP Connection", "err", err)
 						}
 					} else {
 						if req.Reply(false, nil) != nil {
-							log.Printf("Cannot send Reply to the request\n")
+							log.Info("Cannot send Reply to the request\n")
 						}
 					}
 				}
@@ -118,7 +119,7 @@ func handleSFTP(channel ssh.Channel) error {
 	defer server.Close()
 
 	if err := server.Serve(); err == io.EOF {
-		log.Println("SFTP client exited")
+		log.Info("SFTP client exited")
 	} else if err != nil {
 		return err
 	}

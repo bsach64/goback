@@ -3,12 +3,12 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/bsach64/goback/utils"
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 )
 
@@ -22,7 +22,7 @@ var reconstructCmd = &cobra.Command{
 func reconstruct(cmd *cobra.Command, args []string) {
 	contents, err := os.ReadDir("./.data/snapshots")
 	if err != nil {
-		log.Printf("Could not open Data dir, %v\n", err)
+		log.Info("Could not open Data dir,", "err", err)
 		return
 	}
 
@@ -43,24 +43,24 @@ func reconstruct(cmd *cobra.Command, args []string) {
 
 	err = form.Run()
 	if err != nil {
-		log.Fatalf("Reconstruct prompt failed %v\n", err)
+		log.Error("Reconstruct prompt failed", "err", err)
 	}
 
 	filePath := filepath.Join("./.data/snapshots", fileName)
 	dat, err := os.ReadFile(filePath)
 	if err != nil {
-		log.Fatalf("Could not open snapshot file: %v\n", err)
+		log.Error("Could not open snapshot file:", "err", err)
 	}
 
 	var snapshot utils.Snapshot
 	err = json.Unmarshal(dat, &snapshot)
 	if err != nil {
-		log.Fatalf("Could not unmarshal snapshot file: %v\n", err)
+		log.Error("Could not unmarshal snapshot file:", "err", err)
 	}
 
 	byteData, err := utils.Reconstruct(snapshot)
 	if err != nil {
-		log.Fatalf("%v\n", err)
+		log.Error("%v\n", err)
 	}
 
 	fmt.Printf("Here's the reconstructed file:\n%v", string(byteData))

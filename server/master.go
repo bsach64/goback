@@ -4,7 +4,7 @@ import (
 	// "context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"github.com/charmbracelet/log"
 	"net"
 	"os"
 	"sync"
@@ -59,13 +59,13 @@ func NewMaster() {
 func (m *Server) ListenAndServe() error {
 	privateBytes, err := os.ReadFile(m.IdRsa)
 	if err != nil {
-		log.Printf("Failed to load private key: %v\n", err)
+		log.Error("Failed to load private key:", "Error",err)
 		return err
 	}
 
 	private, err := ssh.ParsePrivateKey(privateBytes)
 	if err != nil {
-		log.Printf("Failed to parse private key: %v\n", err)
+		log.Error("Failed to parse private key:",  "Error",err)
 		return err
 	}
 
@@ -77,23 +77,23 @@ func (m *Server) ListenAndServe() error {
 	addr := fmt.Sprintf("%s:%d", m.Host, m.Port)
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
-		log.Printf("Failed to listen on %v: %v\n", addr, err)
+		log.Error("Failed to listen on %v", addr,"Error", err)
 		return err
 	}
 	defer listener.Close()
 
-	log.Printf("Master SSH server listening on %v\n", addr)
+	log.Info("Master SSH server listening on ", "Host",addr)
 
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Printf("Failed to accept connection: %v\n", err)
+			log.Error("Failed to accept connection","Error", err)
 			continue
 		}
 
 		sshConn, _, reqs, err := ssh.NewServerConn(conn, config)
 		if err != nil {
-			log.Printf("Failed to handshake: %v\n", err)
+			log.Error("Failed to handshake,","Error", err)
 			continue
 		}
 
