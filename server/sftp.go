@@ -72,7 +72,7 @@ func (s *SFTPServer) Listen() error {
 			continue
 		}
 
-		log.Printf("SSH connection request %s - %s ", sshConn.RemoteAddr(), addr)
+		log.Info(fmt.Sprintf("SSH connection request %s - %s ", sshConn.RemoteAddr(), addr))
 		go ssh.DiscardRequests(reqs)
 
 		for newChannel := range chans {

@@ -97,7 +97,7 @@ func (m *Server) ListenAndServe() error {
 			continue
 		}
 
-		log.Printf("New SSH to master from %s\n", sshConn.RemoteAddr())
+		log.Info(fmt.Sprintf("New SSH to master from %s", sshConn.RemoteAddr()))
 		go m.handleClient(sshConn, reqs)
 	}
 }
@@ -111,7 +111,7 @@ func (m *Server) handleClient(conn *ssh.ServerConn, reqs <-chan *ssh.Request) {
 			if err != nil {
 				log.Fatalf("failed to marshal worker node: %v", err)
 			}
-			fmt.Println("Received create-backup request with payload:", string(req.Payload))
+            log.Info("Received Create-Backup request with","payload", string(req.Payload))
 			if req.WantReply {
 
 				err := req.Reply(true, replyMessage)

@@ -19,6 +19,7 @@ var serverCmd = &cobra.Command{
 					Title("Choose an option:").
 					Options(
 						huh.NewOption("Listen", "Listen"),
+						huh.NewOption("Worker", "Worker"),
 						huh.NewOption("Log", "Log"),
 						huh.NewOption("Reconstruct", "Reconstruct"),
 						huh.NewOption("Exit", "Exit"),
@@ -26,7 +27,7 @@ var serverCmd = &cobra.Command{
 					Value(&mainOptions),
 			),
 		)
-		err := form.Run()
+        err := form.Run()
 
 		if err != nil {
 			log.Fatal("failed", "err", err)
@@ -43,6 +44,9 @@ var serverCmd = &cobra.Command{
 			if err != nil {
 				log.Info("Could not listen on server")
 			}
+
+        case "Worker":
+            
 		case "Log":
 			//TODO
 		case "Exit":
