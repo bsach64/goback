@@ -74,11 +74,11 @@ export PATH=$PATH:$(pwd)
 ### Client
 The client command opens a prompt allowing you to interact with the backup system. It includes options for uploading files, listing directories, and exiting.
 
-![client-usage](https://i.imgur.com/9miqN3T.png)
+![client-usage](https://i.imgur.com/Ocu6ZqM.png)
 ### Server
 The server command starts a server that listens for incoming client connections. You will see logs of the server's activity and have the option to exit the server prompt.
 
-![alt text](https://i.imgur.com/YFkgNnh.png)
+![alt text](https://i.imgur.com/crutHwp.png)
 
 ## Contributing
 Contributions are welcome! Please ensure that your code adheres to the project's style guidelines and includes tests.
