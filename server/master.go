@@ -30,26 +30,25 @@ type Server struct {
 	IdRsa   string
 }
 
-// Creates a new master server at 0.0.0.0 at port 2022
-func NewMaster() {
+func NewMaster(ip string) {
 
-	//Master server
+	// Master server
 	m := Server{
 		index: 0,
-		Host:  "0.0.0.0",
+		Host:  ip,
 		Port:  2022,
 		IdRsa: "private/id_rsa",
 	}
 
-	//Create a new worker to be changed later
-	err := StartNewWorker(&m, 1, 1, "127.0.0.1", 2025)
+	// Create a new worker to be changed later
+	err := StartNewWorker(&m, 1, 1, ip, 2025)
 	if err != nil {
-		log.Fatalf("Creation of new worker failed")
+		log.Fatal("Creation of new worker failed", "err", err)
 	}
 	go func() {
 		err := m.ListenAndServe()
 		if err != nil {
-			log.Fatalf("Error while creating master")
+			log.Fatal("Error while creating master server", "err", err)
 		}
 	}()
 	select {}

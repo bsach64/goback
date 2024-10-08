@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	// "errors"
-	// "net"
-
 	"github.com/bsach64/goback/server"
+	"github.com/bsach64/goback/utils"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
@@ -24,7 +22,6 @@ var serverCmd = &cobra.Command{
 						huh.NewOption("Listen", "Listen"),
 						huh.NewOption("Worker", "Worker"),
 						huh.NewOption("Log", "Log"),
-						huh.NewOption("Reconstruct", "Reconstruct"),
 						huh.NewOption("Exit", "Exit"),
 					).
 					Value(&mainOptions),
@@ -33,67 +30,30 @@ var serverCmd = &cobra.Command{
 		err := form.Run()
 
 		if err != nil {
-			log.Fatal("failed", "err", err)
-			// log.Fatal(err)
+			log.Fatal("Failed to Run Server Action Form", "err", err)
 		}
 
 		switch mainOptions {
 		case "Listen":
+			localip, err := utils.GetLocalIP()
 			if err != nil {
-				// log.Fatal(err)
-				log.Fatal("failed", "err", err)
+				log.Fatal("Could Not Local IP for server", "err", err)
 			}
-			server.NewMaster()
+
+			server.NewMaster(localip.String())
 			if err != nil {
-				log.Info("Could not listen on server")
+				log.Fatal("Could Not Listen on Server", "err", err)
 			}
 
 		case "Worker":
-
+			// TODO
 		case "Log":
-			//TODO
+			// TODO
 		case "Exit":
-			//TODO
+			// TODO
 		}
 	},
 }
-
-// func getLocalIP() (net.IP, error) {
-// 	interfaces, err := net.Interfaces()
-// 	if err != nil {
-// 		return net.IP{}, err
-// 	}
-
-// 	for _, inter := range interfaces {
-// 		if inter.Flags&net.FlagUp == 0 {
-// 			continue // interface down
-// 		}
-
-// 		if inter.Flags&net.FlagLoopback != 0 {
-// 			continue // Loopback Interface
-// 		}
-
-// 		addresses, err := inter.Addrs()
-// 		if err != nil {
-// 			return net.IP{}, err
-// 		}
-// 		for _, addr := range addresses {
-// 			var ip net.IP
-// 			switch v := addr.(type) {
-// 			case *net.IPNet:
-// 				ip = v.IP
-// 			case *net.IPAddr:
-// 				ip = v.IP
-// 			}
-
-// 			if ip == nil || ip.IsLoopback() {
-// 				continue
-// 			}
-// 			return ip, nil
-// 		}
-// 	}
-// 	return net.IP{}, errors.New("Are you connected to the internet?")
-// }
 
 func init() {
 	rootCmd.AddCommand(serverCmd)
