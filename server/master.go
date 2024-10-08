@@ -3,11 +3,13 @@ package server
 import (
 	// "context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/charmbracelet/log"
 	"net"
 	"os"
 	"sync"
+
+	"github.com/charmbracelet/log"
 
 	// pb "github.com/bsach64/goback/server/backuptask"
 	"golang.org/x/crypto/ssh"
@@ -41,10 +43,10 @@ func NewMaster(ip string) {
 	}
 
 	// Create a new worker to be changed later
-	err := StartNewWorker(&m, 1, 1, ip, 2025)
-	if err != nil {
-		log.Fatal("Creation of new worker failed", "err", err)
-	}
+	// err := StartNewWorker(&m, 1, 1, ip, 2025)
+	// if err != nil {
+	// 	log.Fatal("Creation of new worker failed", "err", err)
+	// }
 	go func() {
 		err := m.ListenAndServe()
 		if err != nil {
@@ -104,18 +106,46 @@ func (m *Server) ListenAndServe() error {
 func (m *Server) handleClient(conn *ssh.ServerConn, reqs <-chan *ssh.Request) {
 	for req := range reqs {
 		switch req.Type {
+		case "worker-details":
+			var newWorker Worker
+			err := json.Unmarshal(req.Payload, &newWorker)
+			if err != nil {
+				log.Error("could not get worker details", "err", err)
+				continue
+			}
+			m.addWorker(newWorker)
+			if req.WantReply {
+				err := req.Reply(true, []byte("Got Worker Details"))
+				if err != nil {
+					log.Error("could not get worker details", "err", err)
+					continue
+				}
+			}
 		case "create-backup":
-			worker := m.chooseWorker()
+			worker, err := m.chooseWorker(conn.RemoteAddr().String())
+			if err != nil {
+				log.Error("could not choose worker", "err", err)
+				if req.WantReply {
+					err := req.Reply(false, []byte("Could not get worker"))
+					if err != nil {
+						log.Error("could not send reply", "err", err)
+						continue
+					}
+				}
+			}
+
 			replyMessage, err := json.Marshal(worker)
 			if err != nil {
-				log.Fatalf("failed to marshal worker node: %v", err)
+				log.Error("failed to marshal worker node", "err", err)
+				continue
 			}
+
 			log.Info("Received Create-Backup request with", "payload", string(req.Payload))
 			if req.WantReply {
-
 				err := req.Reply(true, replyMessage)
 				if err != nil {
-					fmt.Println("Cannot reply to request from :", conn.RemoteAddr().String())
+					log.Error("Cannot reply to request from", "addr", conn.RemoteAddr().String(), "err", err)
+					continue
 				}
 			}
 
@@ -175,12 +205,28 @@ func (m *Server) handleClient(conn *ssh.ServerConn, reqs <-chan *ssh.Request) {
 // 	return resp, nil
 // }
 
-func (m *Server) chooseWorker() Worker {
+func (m *Server) addWorker(newWorker Worker) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	m.workers = append(m.workers, newWorker)
+}
+
+func (m *Server) chooseWorker(ip string) (Worker, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if len(m.workers) == 1 {
+		return Worker{}, errors.New("Need More that One Client!")
+	}
+
 	selectedWorker := m.workers[m.index]
+	if selectedWorker.Ip == ip {
+		m.index = (m.index + 1) % len(m.workers) // skip to next client
+		selectedWorker = m.workers[m.index]
+	}
+
 	m.index = (m.index + 1) % len(m.workers) // Use simple Round Robin to select slave node
 
-	return selectedWorker
+	return selectedWorker, nil
 }

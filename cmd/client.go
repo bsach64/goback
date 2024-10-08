@@ -8,11 +8,15 @@ import (
 
 	"github.com/bsach64/goback/client"
 	"github.com/bsach64/goback/server"
+	"github.com/bsach64/goback/utils"
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )
 
-var userClient client.Client
+var (
+	userClient client.Client
+	worker     server.Worker
+)
 
 var clientCmd = &cobra.Command{
 	Use:   "client",
@@ -33,6 +37,30 @@ var clientCmd = &cobra.Command{
 		log.Info("Connected to Server!")
 
 		defer sshC.Close()
+
+		workerIP, err := utils.GetLocalIP()
+		if err != nil {
+			log.Fatal("Could not get Local IP", "err", err)
+		}
+
+		worker.Ip = workerIP.String()
+		worker.Port = 2025
+
+		go worker.StartSFTPServer()
+
+		dat, err := json.Marshal(worker)
+		if err != nil {
+			log.Fatal("Could not Marshal worker info", "err", err)
+		}
+
+		success, _, err := sshC.SendRequest("worker-details", true, dat)
+		if err != nil {
+			log.Fatal("Could not Send Worker details to Master", "err", err)
+		}
+
+		if !success {
+			log.Fatal("Server Could not Save Worker Details")
+		}
 
 		for {
 			selectedOption, err := promptForAction()
@@ -60,17 +88,17 @@ var clientCmd = &cobra.Command{
 					continue
 				}
 
-				var workerNode server.Worker
-				if err := json.Unmarshal(reply, &workerNode); err != nil {
+				var otherWorker server.Worker
+				if err := json.Unmarshal(reply, &otherWorker); err != nil {
 					log.Fatalf("failed to unmarshal response: %v", err)
 				}
 
 				// Worker node ip and port
-				host := fmt.Sprintf("%s:%d", workerNode.Ip, workerNode.Port)
+				host := fmt.Sprintf("%s:%d", otherWorker.Ip, otherWorker.Port)
 
 				// Worker node username and password for login
 				// Will change this to digital signature later
-				c := client.NewClient(workerNode.SftpUser, workerNode.SftpPass)
+				c := client.NewClient(otherWorker.SftpUser, otherWorker.SftpPass)
 
 				// Connect to sftp server i.e worker node
 				sftpClient, err := c.ConnectToServer(host)
