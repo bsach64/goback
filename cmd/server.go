@@ -45,8 +45,6 @@ var serverCmd = &cobra.Command{
 				log.Fatal("Could Not Listen on Server", "err", err)
 			}
 
-		case "Worker":
-			// TODO
 		case "Log":
 			// TODO
 		case "Exit":

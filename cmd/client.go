@@ -84,7 +84,7 @@ var clientCmd = &cobra.Command{
 				}
 
 				if !success {
-					log.Info("ssh request for create-backup failed")
+					log.Warn("ssh request for create-backup failed")
 					continue
 				}
 
@@ -121,6 +121,10 @@ var clientCmd = &cobra.Command{
 
 			case "Exit":
 				fmt.Println("Exiting client.")
+				_, _, err := sshC.SendRequest("close-connection", false, []byte(worker.Ip))
+				if err != nil {
+					log.Error("Error while closing the connection with server")
+				}
 				sshC.Close()
 				return
 			}
@@ -135,8 +139,8 @@ func promptForIP() (string, error) {
 			huh.NewInput().
 				Title("Enter Server IP:").
 				Prompt("? ").
-				Placeholder("0.0.0.0:8080").
-				Suggestions([]string{"0.0.0.0:8080"}).
+				Placeholder("0.0.0.0:2022").
+				Suggestions([]string{"0.0.0.0:2022"}).
 				Value(&ip),
 		),
 	)

@@ -42,11 +42,6 @@ func NewMaster(ip string) {
 		IdRsa: "private/id_rsa",
 	}
 
-	// Create a new worker to be changed later
-	// err := StartNewWorker(&m, 1, 1, ip, 2025)
-	// if err != nil {
-	// 	log.Fatal("Creation of new worker failed", "err", err)
-	// }
 	go func() {
 		err := m.ListenAndServe()
 		if err != nil {
@@ -155,27 +150,31 @@ func (m *Server) handleClient(conn *ssh.ServerConn, reqs <-chan *ssh.Request) {
 			if req.WantReply {
 				err := req.Reply(true, backupList)
 				if err != nil {
-					fmt.Println("Cannot reply to request from :", conn.RemoteAddr().String())
+					log.Errorf("Cannot reply to request from : %v", conn.RemoteAddr().String())
 				}
 			}
 
 		case "close-connection":
-			fmt.Println("Received close-connection request")
+			log.Info("Received close-connection request")
 			// Implement logic to close the connection
+
+			//Remove the Worker IP
+			workerIP := string(req.Payload)
 			replyMessage := []byte("Connection closing")
 			if req.WantReply {
 				err := req.Reply(true, replyMessage)
 				if err != nil {
-					fmt.Println("Cannot close connection from :", conn.RemoteAddr().String())
+					log.Errorf("Cannot reply to connection from : %v", conn.RemoteAddr().String())
 				}
 			}
-			conn.Close()
+			log.Infof("Connection closed with %v", conn.RemoteAddr().String())
+			m.RemoveWorker(workerIP)
 
 		default:
 			fmt.Println("Unknown request type:", req.Type)
 			err := req.Reply(false, nil) // Deny unknown requests
 			if err != nil {
-				fmt.Println("Replying to unknown request failed from:", conn.RemoteAddr().String())
+				log.Errorf("Replying to unknown request failed from: %v", conn.RemoteAddr().String())
 			}
 		}
 	}
@@ -216,7 +215,7 @@ func (m *Server) chooseWorker(ip string) (Worker, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if len(m.workers) == 1 {
+	if len(m.workers) < 2 {
 		return Worker{}, errors.New("Need More that One Client!")
 	}
 
@@ -229,4 +228,18 @@ func (m *Server) chooseWorker(ip string) (Worker, error) {
 	m.index = (m.index + 1) % len(m.workers) // Use simple Round Robin to select slave node
 
 	return selectedWorker, nil
+}
+
+func (m *Server) RemoveWorker(ip string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for i, worker := range m.workers {
+		if worker.Ip == ip {
+			m.workers = append(m.workers[:i], m.workers[i+1:]...)
+			log.Info("Removed worker", "ip", ip)
+			return
+		}
+	}
+	log.Warn("Worker not found", "ip", ip)
 }
