@@ -8,53 +8,64 @@ import (
 
 	"github.com/bsach64/goback/client"
 	"github.com/bsach64/goback/server"
+	"github.com/bsach64/goback/utils"
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )
 
 var (
 	userClient client.Client
-	clientArgs struct {
-		user     string
-		password string
-		host     string
-	}
+	worker     server.Worker
 )
 
 var clientCmd = &cobra.Command{
 	Use:   "client",
 	Short: "Connect to server and perform actions like upload, list, etc.",
 	Run: func(cmd *cobra.Command, args []string) {
-
-		fmt.Println("Connecting to Server...")
-
-		c, err := userClient.ConnectToServer(clientArgs.host)
+		ip, err := promptForIP()
 		if err != nil {
-			log.Fatal("Failed to connect to server: %v", err)
+			log.Fatal("Could not get Server IP", "err", err)
 		}
 
-		fmt.Println("Connected to Server ! ")
+		log.Info("Connecting to Server...")
 
-		defer c.Close()
+		sshC, err := userClient.ConnectToServer(ip)
+		if err != nil {
+			log.Fatal("Failed to connect to server:", "err", err)
+		}
+
+		log.Info("Connected to Server!")
+
+		defer sshC.Close()
+
+		workerIP, err := utils.GetLocalIP()
+		if err != nil {
+			log.Fatal("Could not get Local IP", "err", err)
+		}
+
+		worker.Ip = workerIP.String()
+		worker.Port = 2025
+
+		go worker.StartSFTPServer()
+
+		dat, err := json.Marshal(worker)
+		if err != nil {
+			log.Fatal("Could not Marshal worker info", "err", err)
+		}
+
+		success, _, err := sshC.SendRequest("worker-details", true, dat)
+		if err != nil {
+			log.Fatal("Could not Send Worker details to Master", "err", err)
+		}
+
+		if !success {
+			log.Fatal("Server Could not Save Worker Details")
+		}
 
 		for {
-			var selectedOption string
-			form := huh.NewForm(
-				huh.NewGroup(
-					huh.NewSelect[string]().
-						Title("Choose an option:").
-						Options(
-							huh.NewOption("Upload File", "Upload File"),
-							huh.NewOption("List Directory", "List Directory"),
-							huh.NewOption("Exit", "Exit"),
-						).
-						Value(&selectedOption),
-				),
-			)
-			err := form.Run()
-
+			selectedOption, err := promptForAction()
 			if err != nil {
-				log.Fatal("Prompt failed", "err", err)
+				log.Fatal("Could not get action", "err", err)
 			}
 
 			switch selectedOption {
@@ -62,58 +73,105 @@ var clientCmd = &cobra.Command{
 				path, err := promptForFilePath()
 
 				if err != nil {
-					log.Error("Prompt failed", "err", err)
+					log.Error("Could not get file path for upload", "err", err)
+					continue
 				}
 
-				createBackupPayload := []byte("Get Server IP")
-				success, reply, err := c.SendRequest("create-backup", true, createBackupPayload)
+				success, reply, err := sshC.SendRequest("create-backup", true, []byte("Get Worker IP"))
 
 				if err != nil {
 					log.Fatalf("Failed to send %s request: %v", "create-backup", err)
 				}
 
 				if !success {
-					fmt.Println("Create Backup request failed")
+					log.Warn("ssh request for create-backup failed")
+					continue
 				}
 
-				var workerNode server.Worker
-				if err := json.Unmarshal(reply, &workerNode); err != nil {
+				var otherWorker server.Worker
+				if err := json.Unmarshal(reply, &otherWorker); err != nil {
 					log.Fatalf("failed to unmarshal response: %v", err)
 				}
 
-				//Worker node ip and port
-				host := fmt.Sprintf("%s:%d", workerNode.Ip, workerNode.Port)
+				// Worker node ip and port
+				host := fmt.Sprintf("%s:%d", otherWorker.Ip, otherWorker.Port)
 
-				//Worker node username and password for login
+				// Worker node username and password for login
 				// Will change this to digital signature later
-				c := client.NewClient(workerNode.SftpUser, workerNode.SftpPass)
+				c := client.NewClient(otherWorker.SftpUser, otherWorker.SftpPass)
 
-				//Connect to sftp server i.e worker node
+				// Connect to sftp server i.e worker node
 				sftpClient, err := c.ConnectToServer(host)
+				defer sftpClient.Close()
 
 				if err != nil {
-					log.Fatalf("Cannot connect to worker node")
+					log.Fatal("Could not connect to worker node", "err", err)
 				}
 
 				err = client.Upload(sftpClient, path)
 
 				if err != nil {
-					log.Printf("Cannot upload file to worker node %s at because %s", host, err)
+					log.Fatalf("Cannot upload file to worker node %s at because %s", host, err)
 				}
 
-				sftpClient.Close()
-				//using defer for this doesn't seem to work for some reason
+				log.Info("Successfully Uploaded", "file", path)
 
 			case "List Directory":
 				listRemoteDir()
 
 			case "Exit":
 				fmt.Println("Exiting client.")
-				c.Close()
+				_, _, err := sshC.SendRequest("close-connection", false, []byte(worker.Ip))
+				if err != nil {
+					log.Error("Error while closing the connection with server")
+				}
+				sshC.Close()
 				return
 			}
 		}
 	},
+}
+
+func promptForIP() (string, error) {
+	var ip string
+	ipPrompt := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Enter Server IP:").
+				Prompt("? ").
+				Placeholder("0.0.0.0:2022").
+				Suggestions([]string{"0.0.0.0:2022"}).
+				Value(&ip),
+		),
+	)
+
+	err := ipPrompt.Run()
+	if err != nil {
+		return "", err
+	}
+	return ip, nil
+}
+
+func promptForAction() (string, error) {
+	var selectedOption string
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("Choose an option:").
+				Options(
+					huh.NewOption("Upload File", "Upload File"),
+					huh.NewOption("List Directory", "List Directory"),
+					huh.NewOption("Exit", "Exit"),
+				).
+				Value(&selectedOption),
+		),
+	)
+	err := form.Run()
+
+	if err != nil {
+		return "", err
+	}
+	return selectedOption, err
 }
 
 func promptForFilePath() (string, error) {
@@ -151,8 +209,5 @@ func listRemoteDir() {
 
 func init() {
 	// Persistent flags for subcommands
-	clientCmd.PersistentFlags().StringVarP(&clientArgs.user, "user", "u", "demo", "username")
-	clientCmd.PersistentFlags().StringVarP(&clientArgs.password, "password", "p", "password", "password")
-	clientCmd.PersistentFlags().StringVarP(&clientArgs.host, "host", "H", "127.0.0.1:2022", "host address")
 	rootCmd.AddCommand(clientCmd)
 }
