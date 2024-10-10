@@ -124,9 +124,9 @@ func (m *Server) handleClient(conn *ssh.ServerConn, reqs <-chan *ssh.Request) {
 					err := req.Reply(false, []byte("Could not get worker"))
 					if err != nil {
 						log.Error("could not send reply", "err", err)
-						continue
 					}
 				}
+				continue
 			}
 
 			replyMessage, err := json.Marshal(worker)
