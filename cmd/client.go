@@ -84,7 +84,7 @@ var clientCmd = &cobra.Command{
 				}
 
 				if !success {
-					log.Warn("ssh request for create-backup failed")
+					log.Warn("ssh request for create-backup failed", "reply", string(reply))
 					continue
 				}
 
@@ -102,11 +102,10 @@ var clientCmd = &cobra.Command{
 
 				// Connect to sftp server i.e worker node
 				sftpClient, err := c.ConnectToServer(host)
-				defer sftpClient.Close()
-
 				if err != nil {
 					log.Fatal("Could not connect to worker node", "err", err)
 				}
+				defer sftpClient.Close()
 
 				err = client.Upload(sftpClient, path)
 
