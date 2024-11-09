@@ -7,13 +7,11 @@ import (
 // Worker is just a usual SFTP server that handles the file request
 // Master assigns client with a worker server
 type Worker struct {
-	id         int
 	Ip         string `json:"ip"`
 	Port       int    `json:"port"`
 	SftpUser   string `json:"sftpUser"`
 	SftpPass   string `json:"sftpPass"`
 	sftpServer *SFTPServer
-	master     *Server
 }
 
 func (w *Worker) StartSFTPServer() {
