@@ -1,7 +1,6 @@
 package server
 
 import (
-	// "context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,10 +10,7 @@ import (
 
 	"github.com/charmbracelet/log"
 
-	// pb "github.com/bsach64/goback/server/backuptask"
 	"golang.org/x/crypto/ssh"
-	// "google.golang.org/grpc"
-	// "google.golang.org/grpc/credentials/insecure"
 )
 
 // Master server is defined using
@@ -179,30 +175,6 @@ func (m *Server) handleClient(conn *ssh.ServerConn, reqs <-chan *ssh.Request) {
 		}
 	}
 }
-
-// func (m *Server) assignWorker(fileName string, fileSize int64) (*pb.WorkerAssignmentResponse, error) {
-// 	worker := m.chooseWorker()
-
-// 	conn, err := grpc.NewClient(worker.gRPCAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	defer conn.Close()
-
-// 	client := pb.NewMasterServiceClient(conn)
-
-// 	req := &pb.BackupTaskRequest{
-// 		FileName: fileName,
-// 		FileSize: fileSize,
-// 	}
-
-// 	resp, err := client.RequestWorker(context.Background(), req)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return resp, nil
-// }
 
 func (m *Server) addWorker(newWorker Worker) {
 	m.mu.Lock()
