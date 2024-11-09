@@ -82,32 +82,31 @@ func ClientLoop(cmd *cobra.Command, args []string) {
 				continue
 			}
 
-			var otherWorker server.Worker
-			if err := json.Unmarshal(reply, &otherWorker); err != nil {
+			var otherWorkers []server.Worker
+			if err := json.Unmarshal(reply, &otherWorkers); err != nil {
 				log.Fatalf("failed to unmarshal response: %v", err)
 			}
 
 			// Worker node ip and port
-			host := fmt.Sprintf("%s:%d", otherWorker.Ip, otherWorker.Port)
+			for _, w := range otherWorkers {
+				wip := fmt.Sprintf("%s:%d", w.Ip, w.Port)
+				// Worker node username and password for login
+				// Will change this to digital signature later
+				c := client.NewClient(w.SftpUser, w.SftpPass)
+				// Connect to sftp server i.e worker node
+				sftpClient, err := c.ConnectToServer(wip)
+				if err != nil {
+					log.Fatal("Could not connect to worker node", "err", err)
+				}
+				err = client.Upload(sftpClient, path)
 
-			// Worker node username and password for login
-			// Will change this to digital signature later
-			c := client.NewClient(otherWorker.SftpUser, otherWorker.SftpPass)
+				if err != nil {
+					log.Fatalf("Cannot upload file to worker node %s at because %s", wip, err)
+				}
+				log.Info("Successfully Uploaded", "file", path)
 
-			// Connect to sftp server i.e worker node
-			sftpClient, err := c.ConnectToServer(host)
-			if err != nil {
-				log.Fatal("Could not connect to worker node", "err", err)
+				sftpClient.Close()
 			}
-			defer sftpClient.Close()
-
-			err = client.Upload(sftpClient, path)
-
-			if err != nil {
-				log.Fatalf("Cannot upload file to worker node %s at because %s", host, err)
-			}
-
-			log.Info("Successfully Uploaded", "file", path)
 
 		case "List Directory":
 			listRemoteDir()
