@@ -113,7 +113,7 @@ func (m *Server) handleClient(conn *ssh.ServerConn, reqs <-chan *ssh.Request) {
 				}
 			}
 		case "create-backup":
-			worker, err := m.chooseWorker(conn.RemoteAddr().String())
+			workers, err := m.getOtherWorkerDetails(conn.RemoteAddr().String())
 			if err != nil {
 				log.Error("could not choose worker", "err", err)
 				if req.WantReply {
@@ -125,7 +125,7 @@ func (m *Server) handleClient(conn *ssh.ServerConn, reqs <-chan *ssh.Request) {
 				continue
 			}
 
-			replyMessage, err := json.Marshal(worker)
+			replyMessage, err := json.Marshal(workers)
 			if err != nil {
 				log.Error("failed to marshal worker node", "err", err)
 				continue
@@ -183,23 +183,22 @@ func (m *Server) addWorker(newWorker Worker) {
 	m.workers = append(m.workers, newWorker)
 }
 
-func (m *Server) chooseWorker(ip string) (Worker, error) {
+func (m *Server) getOtherWorkerDetails(ip string) ([]Worker, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	var workers []Worker
 	if len(m.workers) < 2 {
-		return Worker{}, errors.New("Need More that One Client!")
+		return workers, errors.New("Need More that One Client!")
 	}
 
-	selectedWorker := m.workers[m.index]
-	if selectedWorker.Ip == ip {
-		m.index = (m.index + 1) % len(m.workers) // skip to next client
-		selectedWorker = m.workers[m.index]
+	for _, w := range m.workers {
+		if w.Ip != ip {
+			workers = append(workers, w)
+		}
 	}
 
-	m.index = (m.index + 1) % len(m.workers) // Use simple Round Robin to select slave node
-
-	return selectedWorker, nil
+	return workers, nil
 }
 
 func (m *Server) RemoveWorker(ip string) {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
+	"golang.org/x/crypto/ssh"
 
 	"github.com/bsach64/goback/client"
 	"github.com/bsach64/goback/server"
@@ -15,120 +16,137 @@ import (
 
 var (
 	userClient client.Client
-	worker     server.Worker
 )
 
 var clientCmd = &cobra.Command{
 	Use:   "client",
 	Short: "Connect to server and perform actions like upload, list, etc.",
-	Run: func(cmd *cobra.Command, args []string) {
-		ip, err := promptForIP()
+	Run:   ClientLoop,
+}
+
+func ClientLoop(cmd *cobra.Command, args []string) {
+	ip, err := promptForIP()
+	if err != nil {
+		log.Fatal("Could not get Server IP", "err", err)
+	}
+
+	log.Info("Connecting to Server...")
+
+	sshC, err := userClient.ConnectToServer(ip)
+	if err != nil {
+		log.Fatal("Failed to connect to server:", "err", err)
+	}
+
+	log.Info("Connected to Server!")
+
+	defer sshC.Close()
+
+	worker, err := CreateWorker()
+	if err != nil {
+		log.Fatal("Could not create worker", "err", err)
+	}
+
+	log.Info("Created Worker!")
+	go worker.StartSFTPServer()
+
+	log.Info("Sending Worker details to Server!")
+
+	err = SendWorkerDetails(worker, sshC)
+	if err != nil {
+		log.Fatal("Could not send worker details", "err", err)
+	}
+
+	for {
+		selectedOption, err := promptForAction()
 		if err != nil {
-			log.Fatal("Could not get Server IP", "err", err)
+			log.Fatal("Could not get action", "err", err)
 		}
 
-		log.Info("Connecting to Server...")
+		switch selectedOption {
+		case "Upload File":
+			path, err := promptForFilePath()
 
-		sshC, err := userClient.ConnectToServer(ip)
-		if err != nil {
-			log.Fatal("Failed to connect to server:", "err", err)
-		}
-
-		log.Info("Connected to Server!")
-
-		defer sshC.Close()
-
-		workerIP, err := utils.GetLocalIP()
-		if err != nil {
-			log.Fatal("Could not get Local IP", "err", err)
-		}
-
-		worker.Ip = workerIP.String()
-		worker.Port = 2025
-
-		go worker.StartSFTPServer()
-
-		dat, err := json.Marshal(worker)
-		if err != nil {
-			log.Fatal("Could not Marshal worker info", "err", err)
-		}
-
-		success, _, err := sshC.SendRequest("worker-details", true, dat)
-		if err != nil {
-			log.Fatal("Could not Send Worker details to Master", "err", err)
-		}
-
-		if !success {
-			log.Fatal("Server Could not Save Worker Details")
-		}
-
-		for {
-			selectedOption, err := promptForAction()
 			if err != nil {
-				log.Fatal("Could not get action", "err", err)
+				log.Error("Could not get file path for upload", "err", err)
+				continue
 			}
 
-			switch selectedOption {
-			case "Upload File":
-				path, err := promptForFilePath()
+			success, reply, err := sshC.SendRequest("create-backup", true, []byte("Get Worker IP"))
 
-				if err != nil {
-					log.Error("Could not get file path for upload", "err", err)
-					continue
-				}
+			if err != nil {
+				log.Fatalf("Failed to send %s request: %v", "create-backup", err)
+			}
 
-				success, reply, err := sshC.SendRequest("create-backup", true, []byte("Get Worker IP"))
+			if !success {
+				log.Warn("ssh request for create-backup failed", "reply", string(reply))
+				continue
+			}
 
-				if err != nil {
-					log.Fatalf("Failed to send %s request: %v", "create-backup", err)
-				}
+			var otherWorkers []server.Worker
+			if err := json.Unmarshal(reply, &otherWorkers); err != nil {
+				log.Fatalf("failed to unmarshal response: %v", err)
+			}
 
-				if !success {
-					log.Warn("ssh request for create-backup failed", "reply", string(reply))
-					continue
-				}
-
-				var otherWorker server.Worker
-				if err := json.Unmarshal(reply, &otherWorker); err != nil {
-					log.Fatalf("failed to unmarshal response: %v", err)
-				}
-
-				// Worker node ip and port
-				host := fmt.Sprintf("%s:%d", otherWorker.Ip, otherWorker.Port)
-
+			// Worker node ip and port
+			for _, w := range otherWorkers {
+				wip := fmt.Sprintf("%s:%d", w.Ip, w.Port)
 				// Worker node username and password for login
 				// Will change this to digital signature later
-				c := client.NewClient(otherWorker.SftpUser, otherWorker.SftpPass)
-
+				c := client.NewClient(w.SftpUser, w.SftpPass)
 				// Connect to sftp server i.e worker node
-				sftpClient, err := c.ConnectToServer(host)
+				sftpClient, err := c.ConnectToServer(wip)
 				if err != nil {
 					log.Fatal("Could not connect to worker node", "err", err)
 				}
-				defer sftpClient.Close()
-
 				err = client.Upload(sftpClient, path)
 
 				if err != nil {
-					log.Fatalf("Cannot upload file to worker node %s at because %s", host, err)
+					log.Fatalf("Cannot upload file to worker node %s at because %s", wip, err)
 				}
-
 				log.Info("Successfully Uploaded", "file", path)
 
-			case "List Directory":
-				listRemoteDir()
-
-			case "Exit":
-				fmt.Println("Exiting client.")
-				_, _, err := sshC.SendRequest("close-connection", false, []byte(worker.Ip))
-				if err != nil {
-					log.Error("Error while closing the connection with server")
-				}
-				sshC.Close()
-				return
+				sftpClient.Close()
 			}
+
+		case "List Directory":
+			listRemoteDir()
+
+		case "Exit":
+			fmt.Println("Exiting client.")
+			_, _, err := sshC.SendRequest("close-connection", false, []byte(worker.Ip))
+			if err != nil {
+				log.Error("Error while closing the connection with server")
+			}
+			sshC.Close()
+			return
 		}
-	},
+	}
+}
+
+func CreateWorker() (server.Worker, error) {
+	ip, err := utils.GetLocalIP()
+	if err != nil {
+		return server.Worker{}, err
+	}
+	return server.Worker{Ip: ip.String(), Port: 2025}, nil
+}
+
+func SendWorkerDetails(worker server.Worker, sshC *ssh.Client) error {
+	dat, err := json.Marshal(worker)
+	if err != nil {
+		return err
+	}
+
+	success, _, err := sshC.SendRequest("worker-details", true, dat)
+	if err != nil {
+		return err
+	}
+
+	if !success {
+		return err
+	}
+
+	return nil
 }
 
 func promptForIP() (string, error) {
