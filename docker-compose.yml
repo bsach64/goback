@@ -2,8 +2,8 @@ services:
   server:
     build: .
     command: ["goback", "server"]
-    ports:
-      - "8080:8080"  # Replace with your server's port
+    environment:
+      - KEY_PATH=/app/private/id_rsa
     volumes:
       - ./data:/app/data
       - ./private/id_rsa:/app/private/id_rsa
@@ -19,4 +19,4 @@ services:
     volumes:
       - ./data:/app/data
     deploy:
-      replicas: 3 # Specifies the number of client replicas
+      replicas: 3 
