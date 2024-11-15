@@ -7,15 +7,15 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o /goback main.go
+RUN go build -v -o /goback .
 
 FROM alpine:latest
 
 RUN apk add openssh
 
-RUN mkdir -p /app/private /app/data
+RUN mkdir -p /app/private /app/.data
 
-RUN ssh-keygen -t rsa -b 4096 -f /app/private/id_rsa 
+RUN ssh-keygen -t rsa -b 4096 -f /app/private/id_rsa -N ""
 
 COPY --from=builder /goback /usr/local/bin/goback
 
