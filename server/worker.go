@@ -2,6 +2,7 @@ package server
 
 import (
 	"log"
+	"os"
 
 	"github.com/bsach64/goback/utils"
 )
@@ -17,12 +18,18 @@ type Worker struct {
 }
 
 func (w *Worker) StartSFTPServer() {
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("Cannot get the working directory of %v", err)
+	}
+	rsaPath := wd + "/private/id_rsa"
 
-	err := utils.WatchDirectory("./.data/")
+	err = utils.WatchDirectory("./.data/")
 	if err != nil {
 		log.Fatalf("Error while creating watcher %v", err)
 	}
-	sftpServer := New(w.Ip, "/app/private/id_rsa", w.Port)
+
+	sftpServer := New(w.Ip, rsaPath, w.Port)
 	w.sftpServer = &sftpServer
 
 	go func() {

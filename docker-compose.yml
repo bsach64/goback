@@ -15,8 +15,8 @@ services:
     depends_on:
       - server
     environment:
-      - TERM=xterm-256color   # Add any environment variables needed for the client
+      - TERM=xterm-256color   
     volumes:
       - ./data:/app/data
     deploy:
-      replicas: 1 # Specifies the number of client replicas
+      replicas: 3 # Specifies the number of client replicas
