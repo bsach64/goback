@@ -7,7 +7,7 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -v -o /goback .
+RUN go build -o /goback main.go
 
 FROM alpine:latest
 
