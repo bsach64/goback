@@ -2,6 +2,9 @@ BINARY=goback
 
 all: build
 
+poner: 	#install but in spanish
+ 	go install
+
 tidy:
 	go mod tidy
 
