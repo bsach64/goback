@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -152,19 +151,7 @@ func (m *Server) handleClient(conn *ssh.ServerConn, reqs <-chan *ssh.Request) {
 				}
 			}
 		case "create-backup":
-			workers, err := m.getOtherWorkerDetails(conn.RemoteAddr().String())
-			if err != nil {
-				log.Error("could not choose worker", "err", err)
-				if req.WantReply {
-					err := req.Reply(false, []byte("Could not get worker"))
-					if err != nil {
-						log.Error("could not send reply", "err", err)
-					}
-				}
-				continue
-			}
-
-			replyMessage, err := json.Marshal(workers)
+			replyMessage, err := json.Marshal(m.workers)
 			if err != nil {
 				log.Error("failed to marshal worker node", "err", err)
 				continue
@@ -220,24 +207,6 @@ func (m *Server) addWorker(newWorker Worker) {
 	defer m.mu.Unlock()
 
 	m.workers = append(m.workers, newWorker)
-}
-
-func (m *Server) getOtherWorkerDetails(ip string) ([]Worker, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	var workers []Worker
-	if len(m.workers) < 2 {
-		return workers, errors.New("Need More that One Client!")
-	}
-
-	for _, w := range m.workers {
-		if w.Ip != ip {
-			workers = append(workers, w)
-		}
-	}
-
-	return workers, nil
 }
 
 func (m *Server) RemoveWorker(ip string) {

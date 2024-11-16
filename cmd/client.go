@@ -89,6 +89,9 @@ func ClientLoop(cmd *cobra.Command, args []string) {
 
 			// Worker node ip and port
 			for _, w := range otherWorkers {
+				if w.Ip == worker.Ip {
+					continue
+				}
 				wip := fmt.Sprintf("%s:%d", w.Ip, w.Port)
 				// Worker node username and password for login
 				// Will change this to digital signature later
