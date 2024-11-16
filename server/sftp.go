@@ -27,11 +27,15 @@ func New(host, idRsa string, port int) SFTPServer {
 }
 
 func (s *SFTPServer) Listen() error {
-	rsaKey := s.IdRsa
-	if rsaKey == "" {
-		rsaKey = "private/id_rsa"
+	rsaPath := s.IdRsa
+	if rsaPath == "" {
+		wd, err := os.Getwd()
+		if err != nil {
+			log.Fatal("Cannot get the working directory of %v", err)
+		}
+		rsaPath = wd + "/private/id_rsa"
 	}
-	privateBytes, err := os.ReadFile(rsaKey)
+	privateBytes, err := os.ReadFile(rsaPath)
 	if err != nil {
 		log.Info("Failed to load private key:", "err", err)
 		return err

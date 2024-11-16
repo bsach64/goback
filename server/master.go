@@ -29,13 +29,22 @@ type Server struct {
 }
 
 func NewMaster(ip string) {
+	rsaPath := os.Getenv("KEY_PATH")
+
+	if rsaPath == "" {
+		wd, err := os.Getwd()
+		if err != nil {
+			log.Fatal("Cannot get the working directory:", "Error", err)
+		}
+		rsaPath = wd + "/private/id_rsa"
+	}
 
 	// Master server
 	m := Server{
 		index: 0,
 		Host:  ip,
 		Port:  2022,
-		IdRsa: "private/id_rsa",
+		IdRsa: rsaPath,
 	}
 
 	go func() {

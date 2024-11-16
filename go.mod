@@ -6,6 +6,7 @@ require (
 	github.com/aclements/go-rabin v0.0.0-20170911142644-d0b643ea1a4c
 	github.com/charmbracelet/huh v0.6.0
 	github.com/charmbracelet/log v0.4.0
+	github.com/fsnotify/fsnotify v1.8.0
 	github.com/ncruces/go-sqlite3 v0.20.0
 	github.com/pkg/sftp v1.13.6
 	github.com/spf13/cobra v1.8.1

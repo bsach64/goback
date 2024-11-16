@@ -47,7 +47,7 @@ func (c *Client) ConnectToServer(host string) (*ssh.Client, error) {
 func Upload(client *ssh.Client, f string) error {
 	sftpClient, err := sftp.NewClient(client)
 	if err != nil {
-		log.Error("Failed to create SFTP client: %v", err)
+		log.Errorf("Failed to create SFTP client: %v", err)
 	}
 	defer sftpClient.Close()
 
