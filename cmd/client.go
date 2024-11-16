@@ -147,10 +147,6 @@ func ClientLoop(cmd *cobra.Command, args []string) {
 				log.Warn("ssh request for finish-file-upload failed", "reply", string(reply))
 				continue
 			}
-
-		case "List Directory":
-			listRemoteDir()
-
 		case "Exit":
 			fmt.Println("Exiting client.")
 			_, _, err := sshC.SendRequest("close-connection", false, []byte(worker.Ip))
@@ -258,10 +254,6 @@ func validateFilePath(input string) error {
 		return fmt.Errorf("file path cannot be empty")
 	}
 	return nil
-}
-
-func listRemoteDir() {
-	fmt.Println("ls doesn't work as of now")
 }
 
 func init() {

@@ -166,17 +166,6 @@ func (m *Server) handleClient(conn *ssh.ServerConn, reqs <-chan *ssh.Request) {
 					continue
 				}
 			}
-
-		case "list-backups":
-			fmt.Println("Received list-backups request")
-			backupList := []byte("Backup1, Backup2, Backup3")
-			if req.WantReply {
-				err := req.Reply(true, backupList)
-				if err != nil {
-					log.Errorf("Cannot reply to request from : %v", conn.RemoteAddr().String())
-				}
-			}
-
 		case "close-connection":
 			log.Info("Received close-connection request")
 			// Implement logic to close the connection
