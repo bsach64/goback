@@ -2,12 +2,13 @@ package server
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"sync"
 
+	"github.com/bsach64/goback/utils"
 	"github.com/charmbracelet/log"
 
 	"golang.org/x/crypto/ssh"
@@ -26,9 +27,10 @@ type Server struct {
 	Host    string
 	Port    int
 	IdRsa   string
+	db      utils.DBConn
 }
 
-func NewMaster(ip string) {
+func NewMaster(ip string) error {
 	rsaPath := os.Getenv("KEY_PATH")
 
 	if rsaPath == "" {
@@ -39,12 +41,17 @@ func NewMaster(ip string) {
 		rsaPath = wd + "/private/id_rsa"
 	}
 
-	// Master server
 	m := Server{
 		index: 0,
 		Host:  ip,
 		Port:  2022,
 		IdRsa: rsaPath,
+	}
+
+	var err error
+	m.db, err = utils.CreateDBConn("meta.db")
+	if err != nil {
+		return err
 	}
 
 	go func() {
@@ -111,8 +118,31 @@ func (m *Server) handleClient(conn *ssh.ServerConn, reqs <-chan *ssh.Request) {
 			err := json.Unmarshal(req.Payload, &newWorker)
 			if err != nil {
 				log.Error("could not get worker details", "err", err)
+				if req.WantReply {
+					err := req.Reply(false, []byte("could not get worker details"))
+					if err != nil {
+						log.Error("Could not send reply", "err", err)
+					}
+				}
 				continue
 			}
+
+			err = m.db.WriteClientInfo(utils.ClientInfo{
+				IP:    newWorker.Ip,
+				Alive: true,
+			})
+
+			if err != nil {
+				log.Error("Could not write to db", "err", err)
+				if req.WantReply {
+					err := req.Reply(false, []byte("Could not write to database"))
+					if err != nil {
+						log.Error("Could not send reply", "err", err)
+					}
+				}
+				continue
+			}
+
 			m.addWorker(newWorker)
 			if req.WantReply {
 				err := req.Reply(true, []byte("Got Worker Details"))
@@ -122,19 +152,7 @@ func (m *Server) handleClient(conn *ssh.ServerConn, reqs <-chan *ssh.Request) {
 				}
 			}
 		case "create-backup":
-			workers, err := m.getOtherWorkerDetails(conn.RemoteAddr().String())
-			if err != nil {
-				log.Error("could not choose worker", "err", err)
-				if req.WantReply {
-					err := req.Reply(false, []byte("Could not get worker"))
-					if err != nil {
-						log.Error("could not send reply", "err", err)
-					}
-				}
-				continue
-			}
-
-			replyMessage, err := json.Marshal(workers)
+			replyMessage, err := json.Marshal(m.workers)
 			if err != nil {
 				log.Error("failed to marshal worker node", "err", err)
 				continue
@@ -148,17 +166,6 @@ func (m *Server) handleClient(conn *ssh.ServerConn, reqs <-chan *ssh.Request) {
 					continue
 				}
 			}
-
-		case "list-backups":
-			fmt.Println("Received list-backups request")
-			backupList := []byte("Backup1, Backup2, Backup3")
-			if req.WantReply {
-				err := req.Reply(true, backupList)
-				if err != nil {
-					log.Errorf("Cannot reply to request from : %v", conn.RemoteAddr().String())
-				}
-			}
-
 		case "close-connection":
 			log.Info("Received close-connection request")
 			// Implement logic to close the connection
@@ -175,6 +182,80 @@ func (m *Server) handleClient(conn *ssh.ServerConn, reqs <-chan *ssh.Request) {
 			log.Infof("Connection closed with %v", conn.RemoteAddr().String())
 			m.RemoveWorker(workerIP)
 
+		case "start-file-upload":
+			var fileInfo utils.FileInfo
+			err := json.Unmarshal(req.Payload, &fileInfo)
+			if err != nil {
+				log.Error("Failed to marshal file info", "err", err)
+				if req.WantReply {
+					err := req.Reply(false, []byte(err.Error()))
+					if err != nil {
+						log.Errorf("Cannot reply to connection from : %v", conn.RemoteAddr().String())
+					}
+				}
+				continue
+			}
+
+			// Currently assuming IPv4
+			// Port number of worker and client is different causing issues
+			ip := conn.RemoteAddr().String()
+			ip, _, _ = strings.Cut(ip, ":")
+			err = m.db.StartFileUpload(ip, fileInfo.Filename, fileInfo.Size)
+			if err != nil {
+				log.Error("Could not write to db", "err", err)
+				if req.WantReply {
+					err := req.Reply(false, []byte("failed to start file upload"))
+					if err != nil {
+						log.Errorf("Cannot reply to connection from : %v", conn.RemoteAddr().String())
+					}
+				}
+				continue
+			}
+
+			if req.WantReply {
+				err := req.Reply(true, []byte("Saved metadata!"))
+				if err != nil {
+					log.Errorf("Cannot reply to connection from : %v", conn.RemoteAddr().String())
+				}
+			}
+
+		case "finish-file-upload":
+			var fileInfo utils.FileInfo
+			err := json.Unmarshal(req.Payload, &fileInfo)
+			if err != nil {
+				log.Error("Failed to marshal file info", "err", err)
+				if req.WantReply {
+					err := req.Reply(false, []byte("failed to start file upload"))
+					if err != nil {
+						log.Errorf("Cannot reply to connection from : %v", conn.RemoteAddr().String())
+					}
+				}
+				continue
+			}
+
+			// Currently assuming IPv4
+			// Port number of worker and client is different causing issues
+			ip := conn.RemoteAddr().String()
+			ip, _, _ = strings.Cut(ip, ":")
+			err = m.db.FinishFileUpload(ip, fileInfo.Filename)
+			if err != nil {
+				log.Error("Could not write to db", "err", err)
+				if req.WantReply {
+					err := req.Reply(false, []byte("failed to finish file upload"))
+					if err != nil {
+						log.Errorf("Cannot reply to connection from : %v", conn.RemoteAddr().String())
+					}
+				}
+				continue
+			}
+
+			if req.WantReply {
+				err := req.Reply(true, []byte("Upload Successful!"))
+				if err != nil {
+					log.Errorf("Cannot reply to connection from : %v", conn.RemoteAddr().String())
+				}
+			}
+
 		default:
 			fmt.Println("Unknown request type:", req.Type)
 			err := req.Reply(false, nil) // Deny unknown requests
@@ -190,24 +271,6 @@ func (m *Server) addWorker(newWorker Worker) {
 	defer m.mu.Unlock()
 
 	m.workers = append(m.workers, newWorker)
-}
-
-func (m *Server) getOtherWorkerDetails(ip string) ([]Worker, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	var workers []Worker
-	if len(m.workers) < 2 {
-		return workers, errors.New("Need More that One Client!")
-	}
-
-	for _, w := range m.workers {
-		if w.Ip != ip {
-			workers = append(workers, w)
-		}
-	}
-
-	return workers, nil
 }
 
 func (m *Server) RemoveWorker(ip string) {
