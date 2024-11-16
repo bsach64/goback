@@ -20,9 +20,14 @@ type ClientInfo struct {
 	Alive bool
 }
 
+type FileInfo struct {
+	Filename string `json:"filename"`
+	Size     int64  `json:"size"`
+}
+
 const CreateClientTable = `
 	CREATE TABLE "clients" (
-		"ip" STRING,
+		"ip" TEXT,
 		"alive" BOOLEAN,
 		PRIMARY KEY("ip")
 	);
@@ -31,10 +36,11 @@ const CreateClientTable = `
 const CreateFilesTable = `
 	CREATE TABLE "files" (
 		"id" INTEGER,
-		"client_ip" STRING,
-		"name" STRING,
+		"client_ip" TEXT,
+		"name" TEXT,
 		"size" INTEGER,
-		"created_at" INTEGER,
+		"created_at" DEFAULT CURRENT_TIMESTAMP,
+		"status" TEXT CHECK("status" IN ('inprogress', 'done')),
 		PRIMARY KEY("id"),
 		FOREIGN KEY("client_ip") REFERENCES "clients"("ip")
 	);
@@ -94,6 +100,22 @@ func (db *DBConn) WriteClientInfo(clientInfo ClientInfo) error {
 	}
 
 	_, err = db.DB.Exec("INSERT INTO clients(ip, alive) VALUES(?, ?);", clientInfo.IP, clientInfo.Alive)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (db *DBConn) StartFileUpload(ClientIP string, filename string, size int64) error {
+	_, err := db.DB.Exec(`INSERT INTO files(client_ip, name, size, status) VALUES(?, ?, ?, 'inprogress');`, ClientIP, filename, size)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (db *DBConn) FinishFileUpload(ClientIP string, filename string) error {
+	_, err := db.DB.Exec(`UPDATE files SET status = 'done' WHERE ip = ? AND name = ?;`, ClientIP, filename)
 	if err != nil {
 		return err
 	}

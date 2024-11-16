@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/charmbracelet/log"
 	"golang.org/x/crypto/ssh"
@@ -71,7 +72,33 @@ func ClientLoop(cmd *cobra.Command, args []string) {
 				continue
 			}
 
-			success, reply, err := sshC.SendRequest("create-backup", true, []byte("Get Worker IP"))
+			stat, err := os.Stat(path)
+			if err != nil {
+				log.Error("Could not stat on file for upload", "err", err)
+			}
+
+			fileInfo := utils.FileInfo{
+				Filename: stat.Name(),
+				Size:     stat.Size(),
+			}
+
+			log.Infof("Sending file metadata to server: name: %v, size: %v", fileInfo.Filename, fileInfo.Size)
+			fileInfoDat, err := json.Marshal(&fileInfo)
+			if err != nil {
+				log.Fatal("Could not marshal json", "err", err)
+			}
+
+			success, reply, err := sshC.SendRequest("start-file-upload", true, fileInfoDat)
+			if err != nil {
+				log.Fatalf("Failed to send %s request: %v", "start-file-upload", err)
+			}
+
+			if !success {
+				log.Fatalf("Could not start file upload: %v", string(reply))
+			}
+
+			log.Infof("Starting file upload to other clients: name: %v, size: %v", fileInfo.Filename, fileInfo.Size)
+			success, reply, err = sshC.SendRequest("create-backup", true, []byte("Get Worker IP"))
 
 			if err != nil {
 				log.Fatalf("Failed to send %s request: %v", "create-backup", err)
@@ -109,6 +136,16 @@ func ClientLoop(cmd *cobra.Command, args []string) {
 				log.Info("Successfully Uploaded", "file", path)
 
 				sftpClient.Close()
+			}
+
+			success, reply, err = sshC.SendRequest("finish-file-upload", true, fileInfoDat)
+			if err != nil {
+				log.Fatalf("Failed to send %s request: %v", "finish-file-upload", err)
+			}
+
+			if !success {
+				log.Warn("ssh request for finish-file-upload failed", "reply", string(reply))
+				continue
 			}
 
 		case "List Directory":

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/bsach64/goback/utils"
@@ -127,7 +128,7 @@ func (m *Server) handleClient(conn *ssh.ServerConn, reqs <-chan *ssh.Request) {
 			}
 
 			err = m.db.WriteClientInfo(utils.ClientInfo{
-				IP:    fmt.Sprintf("%v:%v", newWorker.Ip, newWorker.Port),
+				IP:    newWorker.Ip,
 				Alive: true,
 			})
 
@@ -191,6 +192,80 @@ func (m *Server) handleClient(conn *ssh.ServerConn, reqs <-chan *ssh.Request) {
 			}
 			log.Infof("Connection closed with %v", conn.RemoteAddr().String())
 			m.RemoveWorker(workerIP)
+
+		case "start-file-upload":
+			var fileInfo utils.FileInfo
+			err := json.Unmarshal(req.Payload, &fileInfo)
+			if err != nil {
+				log.Error("Failed to marshal file info", "err", err)
+				if req.WantReply {
+					err := req.Reply(false, []byte(err.Error()))
+					if err != nil {
+						log.Errorf("Cannot reply to connection from : %v", conn.RemoteAddr().String())
+					}
+				}
+				continue
+			}
+
+			// Currently assuming IPv4
+			// Port number of worker and client is different causing issues
+			ip := conn.RemoteAddr().String()
+			ip, _, _ = strings.Cut(ip, ":")
+			err = m.db.StartFileUpload(ip, fileInfo.Filename, fileInfo.Size)
+			if err != nil {
+				log.Error("Could not write to db", "err", err)
+				if req.WantReply {
+					err := req.Reply(false, []byte("failed to start file upload"))
+					if err != nil {
+						log.Errorf("Cannot reply to connection from : %v", conn.RemoteAddr().String())
+					}
+				}
+				continue
+			}
+
+			if req.WantReply {
+				err := req.Reply(true, []byte("Saved metadata!"))
+				if err != nil {
+					log.Errorf("Cannot reply to connection from : %v", conn.RemoteAddr().String())
+				}
+			}
+
+		case "finish-file-upload":
+			var fileInfo utils.FileInfo
+			err := json.Unmarshal(req.Payload, &fileInfo)
+			if err != nil {
+				log.Error("Failed to marshal file info", "err", err)
+				if req.WantReply {
+					err := req.Reply(false, []byte("failed to start file upload"))
+					if err != nil {
+						log.Errorf("Cannot reply to connection from : %v", conn.RemoteAddr().String())
+					}
+				}
+				continue
+			}
+
+			// Currently assuming IPv4
+			// Port number of worker and client is different causing issues
+			ip := conn.RemoteAddr().String()
+			ip, _, _ = strings.Cut(ip, ":")
+			err = m.db.FinishFileUpload(ip, fileInfo.Filename)
+			if err != nil {
+				log.Error("Could not write to db", "err", err)
+				if req.WantReply {
+					err := req.Reply(false, []byte("failed to finish file upload"))
+					if err != nil {
+						log.Errorf("Cannot reply to connection from : %v", conn.RemoteAddr().String())
+					}
+				}
+				continue
+			}
+
+			if req.WantReply {
+				err := req.Reply(true, []byte("Upload Successful!"))
+				if err != nil {
+					log.Errorf("Cannot reply to connection from : %v", conn.RemoteAddr().String())
+				}
+			}
 
 		default:
 			fmt.Println("Unknown request type:", req.Type)
