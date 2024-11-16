@@ -14,9 +14,6 @@ lint: format
 build: lint
 	go build -v .
 
-database:
-	sqlite3 -init createdb.sql meta.db .quit
-
 test: lint
 	go test -v ./...
 

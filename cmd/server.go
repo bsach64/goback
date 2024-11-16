@@ -18,7 +18,7 @@ var serverCmd = &cobra.Command{
 		}
 
 		log.Info("Starting Master Server")
-		server.NewMaster(localip.String())
+		err = server.NewMaster(localip.String())
 		if err != nil {
 			log.Fatal("Could Not Listen on Server", "err", err)
 		}

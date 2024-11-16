@@ -8,6 +8,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/bsach64/goback/utils"
 	"github.com/charmbracelet/log"
 
 	"golang.org/x/crypto/ssh"
@@ -26,9 +27,10 @@ type Server struct {
 	Host    string
 	Port    int
 	IdRsa   string
+	db      utils.DBConn
 }
 
-func NewMaster(ip string) {
+func NewMaster(ip string) error {
 	rsaPath := os.Getenv("KEY_PATH")
 
 	if rsaPath == "" {
@@ -39,12 +41,17 @@ func NewMaster(ip string) {
 		rsaPath = wd + "/private/id_rsa"
 	}
 
-	// Master server
 	m := Server{
 		index: 0,
 		Host:  ip,
 		Port:  2022,
 		IdRsa: rsaPath,
+	}
+
+	var err error
+	m.db, err = utils.CreateDBConn("meta.db")
+	if err != nil {
+		return err
 	}
 
 	go func() {
@@ -111,8 +118,31 @@ func (m *Server) handleClient(conn *ssh.ServerConn, reqs <-chan *ssh.Request) {
 			err := json.Unmarshal(req.Payload, &newWorker)
 			if err != nil {
 				log.Error("could not get worker details", "err", err)
+				if req.WantReply {
+					err := req.Reply(false, []byte("could not get worker details"))
+					if err != nil {
+						log.Error("Could not send reply", "err", err)
+					}
+				}
 				continue
 			}
+
+			err = m.db.WriteClientInfo(utils.ClientInfo{
+				IP:    fmt.Sprintf("%v:%v", newWorker.Ip, newWorker.Port),
+				Alive: true,
+			})
+
+			if err != nil {
+				log.Error("Could not write to db", "err", err)
+				if req.WantReply {
+					err := req.Reply(false, []byte("Could not write to database"))
+					if err != nil {
+						log.Error("Could not send reply", "err", err)
+					}
+				}
+				continue
+			}
+
 			m.addWorker(newWorker)
 			if req.WantReply {
 				err := req.Reply(true, []byte("Got Worker Details"))

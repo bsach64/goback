@@ -137,13 +137,13 @@ func SendWorkerDetails(worker server.Worker, sshC *ssh.Client) error {
 		return err
 	}
 
-	success, _, err := sshC.SendRequest("worker-details", true, dat)
+	success, reply, err := sshC.SendRequest("worker-details", true, dat)
 	if err != nil {
 		return err
 	}
 
 	if !success {
-		return err
+		return fmt.Errorf("failed to send worker-details: %v", string(reply))
 	}
 
 	return nil
