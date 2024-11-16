@@ -22,22 +22,21 @@ type ClientInfo struct {
 
 const CreateClientTable = `
 	CREATE TABLE "clients" (
-		"id" INTEGER,
 		"ip" STRING,
 		"alive" BOOLEAN,
-		PRIMARY KEY("id")
+		PRIMARY KEY("ip")
 	);
 `
 
 const CreateFilesTable = `
 	CREATE TABLE "files" (
 		"id" INTEGER,
-		"client_id" INTEGER,
+		"client_ip" STRING,
 		"name" STRING,
 		"size" INTEGER,
 		"created_at" INTEGER,
 		PRIMARY KEY("id"),
-		FOREIGN KEY("client_id") REFERENCES "clients"("id")
+		FOREIGN KEY("client_ip") REFERENCES "clients"("ip")
 	);
 `
 
@@ -80,7 +79,7 @@ func (db *DBConn) WriteClientInfo(clientInfo ClientInfo) error {
 	defer rows.Close()
 
 	for rows.Next() {
-		err := rows.Scan(new(interface{}), &tmpClient.IP, &tmpClient.Alive)
+		err := rows.Scan(&tmpClient.IP, &tmpClient.Alive)
 		if err != nil {
 			return err
 		}
