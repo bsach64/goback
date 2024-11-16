@@ -2,11 +2,11 @@ services:
   server:
     build: .
     command: ["goback", "server"]
+    working_dir: /app
     environment:
       - KEY_PATH=/app/private/id_rsa
     volumes:
-      - ./data:/app/data
-      - ./private/id_rsa:/app/private/id_rsa
+      - ./.data:/app/.data
   client:
     tty: true
     stdin_open: true
@@ -14,9 +14,12 @@ services:
     command: ["goback", "client"]
     depends_on:
       - server
+    working_dir: /app
     environment:
-      - TERM=xterm-256color   
+      - KEY_PATH=/app/private/id_rsa
+      - TERM=xterm-256color
     volumes:
-      - ./data:/app/data
+      - ./.data:/app/.data
+      - ./test_files:/app/test_files
     deploy:
       replicas: 3 
