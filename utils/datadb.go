@@ -115,7 +115,7 @@ func (db *DBConn) StartFileUpload(ClientIP string, filename string, size int64) 
 }
 
 func (db *DBConn) FinishFileUpload(ClientIP string, filename string) error {
-	_, err := db.DB.Exec(`UPDATE files SET status = 'done' WHERE ip = ? AND name = ?;`, ClientIP, filename)
+	_, err := db.DB.Exec(`UPDATE files SET status = 'done' WHERE client_ip = ? AND name = ?;`, ClientIP, filename)
 	if err != nil {
 		return err
 	}
