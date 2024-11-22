@@ -20,14 +20,17 @@ type Worker struct {
 func (w *Worker) StartSFTPServer() {
 	wd, err := os.Getwd()
 	if err != nil {
-		log.Fatalf("Cannot get the working directory of %v", err)
+		log.Fatalf("Cannot get the working directory: %v", err)
 	}
+
 	rsaPath := wd + "/private/id_rsa"
 
-	err = utils.WatchDirectory("./.data/")
+	// Start directory watcher
+	watcher, err := utils.WatchDirectory(wd + "/.data")
 	if err != nil {
-		log.Fatalf("Error while creating watcher %v", err)
+		log.Fatalf("Error while creating watcher: %v", err)
 	}
+	defer watcher.Close() // Ensure the watcher is cleaned up on server shutdown
 
 	sftpServer := New(w.Ip, rsaPath, w.Port)
 	w.sftpServer = &sftpServer
@@ -38,4 +41,7 @@ func (w *Worker) StartSFTPServer() {
 			log.Fatalf("Worker SFTP server failed to listen: %v", err)
 		}
 	}()
+
+	// Keep the worker process alive
+	select {}
 }
