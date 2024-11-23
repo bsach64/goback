@@ -77,33 +77,16 @@ func CreateDBConn(filename string) (DBConn, error) {
 }
 
 func (db *DBConn) WriteClientInfo(clientInfo ClientInfo) error {
-	var tmpClient ClientInfo
-	rows, err := db.DB.Query("SELECT * FROM clients;")
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		err := rows.Scan(&tmpClient.IP, &tmpClient.Alive)
+	row := db.DB.QueryRow("SELECT alive FROM clients WHERE ip = ?;", clientInfo.IP)
+	var alive bool
+	err := row.Scan(&alive)
+	if errors.Is(err, sql.ErrNoRows) {
+		_, err = db.DB.Exec("INSERT INTO clients(ip, alive) VALUES(?, ?);", clientInfo.IP, clientInfo.Alive)
 		if err != nil {
 			return err
 		}
-
-		if tmpClient.IP == clientInfo.IP {
-			_, err = db.DB.Exec("UPDATE clients SET alive = 1 WHERE ip = ?", clientInfo.IP)
-			if err != nil {
-				return err
-			}
-			return nil
-		}
 	}
-
-	_, err = db.DB.Exec("INSERT INTO clients(ip, alive) VALUES(?, ?);", clientInfo.IP, clientInfo.Alive)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (db *DBConn) StartFileUpload(ClientIP string, filename string, size int64) error {
