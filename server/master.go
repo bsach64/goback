@@ -168,10 +168,15 @@ func (m *Server) handleClient(conn *ssh.ServerConn, reqs <-chan *ssh.Request) {
 			}
 		case "close-connection":
 			log.Info("Received close-connection request")
-			// Implement logic to close the connection
-
-			//Remove the Worker IP
 			workerIP := string(req.Payload)
+			err := m.db.RemoveClientInfo(string(req.Payload))
+			if err != nil {
+				err := req.Reply(true, []byte(fmt.Sprintf("Could not close connection: %v", err.Error())))
+				if err != nil {
+					log.Errorf("Cannot reply to connection from : %v", conn.RemoteAddr().String())
+				}
+			}
+
 			replyMessage := []byte("Connection closing")
 			if req.WantReply {
 				err := req.Reply(true, replyMessage)
@@ -180,6 +185,7 @@ func (m *Server) handleClient(conn *ssh.ServerConn, reqs <-chan *ssh.Request) {
 				}
 			}
 			log.Infof("Connection closed with %v", conn.RemoteAddr().String())
+			// Remove the Worker IP
 			m.RemoveWorker(workerIP)
 
 		case "start-file-upload":

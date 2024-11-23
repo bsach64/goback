@@ -89,6 +89,21 @@ func (db *DBConn) WriteClientInfo(clientInfo ClientInfo) error {
 	return err
 }
 
+func (db *DBConn) RemoveClientInfo(ip string) error {
+	res, err := db.DB.Exec(`UPDATE clients SET alive = 0 WHERE ip = ?`, ip)
+	if err != nil {
+		return err
+	}
+	cnt, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if cnt > 1 {
+		return fmt.Errorf("More than one row affected!")
+	}
+	return nil
+}
+
 func (db *DBConn) StartFileUpload(ClientIP string, filename string, size int64) error {
 	_, err := db.DB.Exec(`INSERT INTO files(client_ip, name, size, status) VALUES(?, ?, ?, 'inprogress');`, ClientIP, filename, size)
 	if err != nil {
