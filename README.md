@@ -1,6 +1,6 @@
 # Goback
 
-**Goback** is a distributed local backup system designed to facilitate secure and efficient file backups. The system includes both a client and server component to manage and perform backups across different machines.
+**Goback** is a distributed local backup tool designed to facilitate secure and efficient file backups. The tool includes both a client and server component to manage and perform backups across different machines.
 
 ## Getting Started
 
@@ -72,7 +72,7 @@ export PATH=$PATH:$(pwd)
 
 ## Usage
 ### Client
-The client command opens a prompt allowing you to interact with the backup system. It includes options for uploading files, listing directories, and exiting.
+The client command opens a prompt allowing you to interact with the backup tool. It includes options for uploading files, listing directories, and exiting.
 
 ![client-usage](https://i.imgur.com/Ocu6ZqM.png)
 ### Server

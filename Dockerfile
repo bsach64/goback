@@ -13,7 +13,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN apt-get intsall openssh && \
+RUN apt-get install openssh sqlite && \
     mkdir -p /app/private /app/.data && \
     [ ! -f /app/private/id_rsa ] && ssh-keygen -t rsa -b 4096 -f /app/private/id_rsa -N "" || true
 
