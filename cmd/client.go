@@ -64,6 +64,7 @@ func ClientLoop(cmd *cobra.Command, args []string) {
 		}
 
 		switch selectedOption {
+
 		case "Upload File":
 			path, err := promptForFilePath()
 
@@ -147,6 +148,29 @@ func ClientLoop(cmd *cobra.Command, args []string) {
 				log.Warn("ssh request for finish-file-upload failed", "reply", string(reply))
 				continue
 			}
+
+		case "Add Directory to Sync":
+			dir, err := promptForDirectory()
+			if err != nil {
+				log.Error("Could not get directory for sync", "err", err)
+				continue
+			}
+
+			if dir == "" {
+				dir = "./.data" // Default directory
+			}
+
+			log.Infof("Updating Directory.json with directory: %s", dir)
+
+			// Update the JSON file
+			configPath := "Directory.json"
+			err = updateDirectoryInConfig(configPath, dir)
+			if err != nil {
+				log.Error("Failed to update directory in config file", "err", err)
+				continue
+			}
+
+			log.Infof("Directory.json updated successfully with: %s", dir)
 		case "Exit":
 			fmt.Println("Exiting client.")
 			_, _, err := sshC.SendRequest("close-connection", false, []byte(worker.Ip))
@@ -185,6 +209,25 @@ func SendWorkerDetails(worker server.Worker, sshC *ssh.Client) error {
 	return nil
 }
 
+func promptForDirectory() (string, error) {
+	var directory string
+	directoryPrompt := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Enter Directory to watch").
+				Prompt("? ").
+				Placeholder(".data").
+				Suggestions([]string{"./.data"}).
+				Value(&directory),
+		),
+	)
+	err := directoryPrompt.Run()
+	if err != nil {
+		return "", err
+	}
+	return directory, nil
+}
+
 func promptForIP() (string, error) {
 	var ip string
 	ipPrompt := huh.NewForm(
@@ -214,6 +257,7 @@ func promptForAction() (string, error) {
 				Options(
 					huh.NewOption("Upload File", "Upload File"),
 					huh.NewOption("List Directory", "List Directory"),
+					huh.NewOption("Add Directory to Sync", "Add Directory to Sync"),
 					huh.NewOption("Exit", "Exit"),
 				).
 				Value(&selectedOption),
@@ -253,6 +297,40 @@ func validateFilePath(input string) error {
 	if len(input) == 0 {
 		return fmt.Errorf("file path cannot be empty")
 	}
+	return nil
+}
+
+func updateDirectoryInConfig(path, newDir string) error {
+	config := server.Config{}
+
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		config.Directory = newDir
+	} else {
+		file, err := os.Open(path)
+		if err != nil {
+			return fmt.Errorf("failed to open config file: %w", err)
+		}
+		defer file.Close()
+
+		decoder := json.NewDecoder(file)
+		if err := decoder.Decode(&config); err != nil {
+			return fmt.Errorf("failed to parse config file: %w", err)
+		}
+
+		config.Directory = newDir
+	}
+
+	file, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("failed to create or truncate config file: %w", err)
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	if err := encoder.Encode(&config); err != nil {
+		return fmt.Errorf("failed to write updated config to file: %w", err)
+	}
+
 	return nil
 }
 
