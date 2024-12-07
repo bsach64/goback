@@ -157,20 +157,8 @@ func ClientLoop(cmd *cobra.Command, args []string) {
 			}
 
 			if dir == "" {
-				dir = "./.data" // Default directory
+				dir = "./files" // Default directory
 			}
-
-			log.Infof("Updating Directory.json with directory: %s", dir)
-
-			// Update the JSON file
-			configPath := "Directory.json"
-			err = updateDirectoryInConfig(configPath, dir)
-			if err != nil {
-				log.Error("Failed to update directory in config file", "err", err)
-				continue
-			}
-
-			log.Infof("Directory.json updated successfully with: %s", dir)
 		case "Exit":
 			fmt.Println("Exiting client.")
 			_, _, err := sshC.SendRequest("close-connection", false, []byte(worker.Ip))
@@ -214,10 +202,10 @@ func promptForDirectory() (string, error) {
 	directoryPrompt := huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
-				Title("Enter Directory to watch").
+				Title("Enter Directory to Watch (If it does not exist it will be create)").
 				Prompt("? ").
-				Placeholder(".data").
-				Suggestions([]string{"./.data"}).
+				Placeholder("./files").
+				Suggestions([]string{"./files"}).
 				Value(&directory),
 		),
 	)
@@ -297,40 +285,6 @@ func validateFilePath(input string) error {
 	if len(input) == 0 {
 		return fmt.Errorf("file path cannot be empty")
 	}
-	return nil
-}
-
-func updateDirectoryInConfig(path, newDir string) error {
-	config := server.Config{}
-
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		config.Directory = newDir
-	} else {
-		file, err := os.Open(path)
-		if err != nil {
-			return fmt.Errorf("failed to open config file: %w", err)
-		}
-		defer file.Close()
-
-		decoder := json.NewDecoder(file)
-		if err := decoder.Decode(&config); err != nil {
-			return fmt.Errorf("failed to parse config file: %w", err)
-		}
-
-		config.Directory = newDir
-	}
-
-	file, err := os.Create(path)
-	if err != nil {
-		return fmt.Errorf("failed to create or truncate config file: %w", err)
-	}
-	defer file.Close()
-
-	encoder := json.NewEncoder(file)
-	if err := encoder.Encode(&config); err != nil {
-		return fmt.Errorf("failed to write updated config to file: %w", err)
-	}
-
 	return nil
 }
 

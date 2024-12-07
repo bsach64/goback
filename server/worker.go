@@ -55,39 +55,3 @@ func (w *Worker) StartSFTPServer() {
 	// Keep the worker process alive
 	select {}
 }
-
-type Config struct {
-	Directory string `json:"dir"`
-}
-
-func readConf(path string) Config {
-	config := Config{}
-
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		config.Directory = "./.data"
-		file, err := os.Create(path)
-		if err != nil {
-			log.Fatalf("Failed to create config file: %v", err)
-		}
-		defer file.Close()
-
-		encoder := json.NewEncoder(file)
-		if err := encoder.Encode(config); err != nil {
-			log.Fatalf("Failed to write default config to file: %v", err)
-		}
-		log.Printf("Config file created with default directory: %s", config.Directory)
-	} else {
-		file, err := os.Open(path)
-		if err != nil {
-			log.Fatalf("Failed to open config file: %v", err)
-		}
-		defer file.Close()
-
-		decoder := json.NewDecoder(file)
-		if err := decoder.Decode(&config); err != nil {
-			log.Fatalf("Failed to parse config file: %v", err)
-		}
-	}
-
-	return config
-}
