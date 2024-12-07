@@ -13,6 +13,7 @@ import (
 	"github.com/bsach64/goback/server"
 	"github.com/bsach64/goback/utils"
 	"github.com/charmbracelet/huh"
+	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
 )
 
@@ -80,10 +81,14 @@ func ClientLoop(cmd *cobra.Command, args []string) {
 			}
 
 		case "Add Directory to Sync":
-			_, err := promptForDirectory()
+			dir, err := promptForDirectory()
 			if err != nil {
 				log.Error("Could not get directory for sync", "err", err)
 				continue
+			}
+			err = watchAndUpload(dir, sshC, worker)
+			if err != nil {
+				log.Error("Watcher with error", "err", err)
 			}
 
 		case "Exit":
@@ -96,6 +101,53 @@ func ClientLoop(cmd *cobra.Command, args []string) {
 			return
 		}
 	}
+}
+
+func watchAndUpload(dir string, sshC *ssh.Client, worker server.Worker) error {
+	err := os.MkdirAll(dir, 0755)
+	if err != nil {
+		return err
+	}
+
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return err
+	}
+
+	log.Info("Starting to watch directory:", dir)
+
+	go func() {
+		for {
+			select {
+			case event, ok := <-watcher.Events:
+				if !ok {
+					log.Error("Watcher events channel closed")
+					return
+				}
+				if event.Has(fsnotify.Create) {
+					err = uploadFile(sshC, event.Name, worker)
+					if err != nil {
+						log.Error("Could not upload newly created file", "file", event.Name, "err", err)
+					}
+					log.Info("Successfully Uploaded", "file", event.Name)
+				}
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					log.Error("Watcher errors channel closed")
+					return
+				}
+				log.Errorf("Watcher error: %v", err)
+			}
+		}
+	}()
+
+	err = watcher.Add(dir)
+	if err != nil {
+		watcher.Close() // Clean up if watcher.Add fails
+		return fmt.Errorf("failed to add directory to watcher: %v", err)
+	}
+
+	select {}
 }
 
 func uploadFile(sshC *ssh.Client, path string, worker server.Worker) error {
