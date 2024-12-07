@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/charmbracelet/log"
 	"golang.org/x/crypto/ssh"
@@ -140,26 +141,30 @@ func uploadFile(sshC *ssh.Client, path string, worker server.Worker) error {
 	}
 
 	// Worker node ip and port
+	var wg sync.WaitGroup
 	for _, w := range otherWorkers {
 		if w.Ip == worker.Ip {
 			continue
 		}
-		wip := fmt.Sprintf("%s:%d", w.Ip, w.Port)
-		c := client.NewClient(w.SftpUser, w.SftpPass)
-		// Connect to sftp server i.e worker node
-		sftpClient, err := c.ConnectToServer(wip)
-		if err != nil {
-			log.Fatal("Could not connect to worker node", "err", err)
-		}
-		err = client.Upload(sftpClient, path)
+		wg.Add(1)
+		go func(ip string, port int) {
+			wip := fmt.Sprintf("%s:%d", ip, port)
+			c := client.NewClient(w.SftpUser, w.SftpPass)
+			// Connect to sftp server i.e worker node
+			sftpClient, err := c.ConnectToServer(wip)
+			if err != nil {
+				log.Fatal("Could not connect to worker node", "err", err)
+			}
+			err = client.Upload(sftpClient, path)
 
-		if err != nil {
-			log.Fatalf("Cannot upload file to worker node %s at because %s", wip, err)
-		}
-		log.Info("Successfully Uploaded", "file", path)
-
-		sftpClient.Close()
+			if err != nil {
+				log.Fatalf("Cannot upload file to worker node %s at because %s", wip, err)
+			}
+			log.Info("Successfully Uploaded", "file", path)
+			sftpClient.Close()
+		}(w.Ip, w.Port)
 	}
+	wg.Wait()
 
 	success, reply, err = sshC.SendRequest("finish-file-upload", true, fileInfoDat)
 	if err != nil {
