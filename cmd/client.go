@@ -67,85 +67,14 @@ func ClientLoop(cmd *cobra.Command, args []string) {
 
 		case "Upload File":
 			path, err := promptForFilePath()
-
 			if err != nil {
 				log.Error("Could not get file path for upload", "err", err)
 				continue
 			}
 
-			stat, err := os.Stat(path)
+			err = uploadFile(sshC, path, worker)
 			if err != nil {
-				log.Error("Could not stat on file for upload", "err", err)
-			}
-
-			fileInfo := utils.FileInfo{
-				Filename: stat.Name(),
-				Size:     stat.Size(),
-			}
-
-			log.Infof("Sending file metadata to server: name: %v, size: %v", fileInfo.Filename, fileInfo.Size)
-			fileInfoDat, err := json.Marshal(&fileInfo)
-			if err != nil {
-				log.Fatal("Could not marshal json", "err", err)
-			}
-
-			success, reply, err := sshC.SendRequest("start-file-upload", true, fileInfoDat)
-			if err != nil {
-				log.Fatalf("Failed to send %s request: %v", "start-file-upload", err)
-			}
-
-			if !success {
-				log.Fatalf("Could not start file upload: %v", string(reply))
-			}
-
-			log.Infof("Starting file upload to other clients: name: %v, size: %v", fileInfo.Filename, fileInfo.Size)
-			success, reply, err = sshC.SendRequest("create-backup", true, []byte("Get Worker IP"))
-
-			if err != nil {
-				log.Fatalf("Failed to send %s request: %v", "create-backup", err)
-			}
-
-			if !success {
-				log.Warn("ssh request for create-backup failed", "reply", string(reply))
-				continue
-			}
-
-			var otherWorkers []server.Worker
-			if err := json.Unmarshal(reply, &otherWorkers); err != nil {
-				log.Fatalf("failed to unmarshal response: %v", err)
-			}
-
-			// Worker node ip and port
-			for _, w := range otherWorkers {
-				if w.Ip == worker.Ip {
-					continue
-				}
-				wip := fmt.Sprintf("%s:%d", w.Ip, w.Port)
-				// Worker node username and password for login
-				// Will change this to digital signature later
-				c := client.NewClient(w.SftpUser, w.SftpPass)
-				// Connect to sftp server i.e worker node
-				sftpClient, err := c.ConnectToServer(wip)
-				if err != nil {
-					log.Fatal("Could not connect to worker node", "err", err)
-				}
-				err = client.Upload(sftpClient, path)
-
-				if err != nil {
-					log.Fatalf("Cannot upload file to worker node %s at because %s", wip, err)
-				}
-				log.Info("Successfully Uploaded", "file", path)
-
-				sftpClient.Close()
-			}
-
-			success, reply, err = sshC.SendRequest("finish-file-upload", true, fileInfoDat)
-			if err != nil {
-				log.Fatalf("Failed to send %s request: %v", "finish-file-upload", err)
-			}
-
-			if !success {
-				log.Warn("ssh request for finish-file-upload failed", "reply", string(reply))
+				log.Error("Could not upload file", "err", err)
 				continue
 			}
 
@@ -166,6 +95,81 @@ func ClientLoop(cmd *cobra.Command, args []string) {
 			return
 		}
 	}
+}
+
+func uploadFile(sshC *ssh.Client, path string, worker server.Worker) error {
+	stat, err := os.Stat(path)
+	if err != nil {
+		log.Error("Could not stat on file for upload", "err", err)
+	}
+
+	fileInfo := utils.FileInfo{
+		Filename: stat.Name(),
+		Size:     stat.Size(),
+	}
+
+	log.Infof("Sending file metadata to server: name: %v, size: %v", fileInfo.Filename, fileInfo.Size)
+	fileInfoDat, err := json.Marshal(&fileInfo)
+	if err != nil {
+		return fmt.Errorf("Could not marshal json: %v", err)
+	}
+
+	success, reply, err := sshC.SendRequest("start-file-upload", true, fileInfoDat)
+	if err != nil {
+		return fmt.Errorf("Failed to send %s request: %v", "start-file-upload", err)
+	}
+
+	if !success {
+		return fmt.Errorf("Could not start file upload: reply: %v", string(reply))
+	}
+
+	log.Infof("Starting file upload to other clients: name: %v, size: %v", fileInfo.Filename, fileInfo.Size)
+	success, reply, err = sshC.SendRequest("create-backup", true, []byte("Get Worker IP"))
+
+	if err != nil {
+		return fmt.Errorf("Failed to send %s request err: %v", "create-backup", err)
+	}
+
+	if !success {
+		return fmt.Errorf("ssh request for create-backup failed: reply: %v", string(reply))
+	}
+
+	var otherWorkers []server.Worker
+	if err := json.Unmarshal(reply, &otherWorkers); err != nil {
+		return fmt.Errorf("failed to unmarshal response: %v", err)
+	}
+
+	// Worker node ip and port
+	for _, w := range otherWorkers {
+		if w.Ip == worker.Ip {
+			continue
+		}
+		wip := fmt.Sprintf("%s:%d", w.Ip, w.Port)
+		c := client.NewClient(w.SftpUser, w.SftpPass)
+		// Connect to sftp server i.e worker node
+		sftpClient, err := c.ConnectToServer(wip)
+		if err != nil {
+			log.Fatal("Could not connect to worker node", "err", err)
+		}
+		err = client.Upload(sftpClient, path)
+
+		if err != nil {
+			log.Fatalf("Cannot upload file to worker node %s at because %s", wip, err)
+		}
+		log.Info("Successfully Uploaded", "file", path)
+
+		sftpClient.Close()
+	}
+
+	success, reply, err = sshC.SendRequest("finish-file-upload", true, fileInfoDat)
+	if err != nil {
+		return fmt.Errorf("Failed to send %s request: err = %v", "finish-file-upload", err)
+	}
+
+	if !success {
+		return fmt.Errorf("ssh request for finish-file-upload failed: reply: %v", string(reply))
+	}
+	return nil
 }
 
 func CreateWorker() (server.Worker, error) {
