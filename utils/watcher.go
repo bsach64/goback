@@ -7,10 +7,10 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-func WatchDirectory(directory string) (*fsnotify.Watcher, error) {
+func WatchDirectory(directory string) (error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		return nil, fmt.Errorf("error while creating directory watcher: %v", err)
+		return err
 	}
 
 	log.Info("Starting to watch directory:", directory)
@@ -40,8 +40,8 @@ func WatchDirectory(directory string) (*fsnotify.Watcher, error) {
 	err = watcher.Add(directory)
 	if err != nil {
 		watcher.Close() // Clean up if watcher.Add fails
-		return nil, fmt.Errorf("failed to add directory to watcher: %v", err)
+		return fmt.Errorf("failed to add directory to watcher: %v", err)
 	}
 
-	return watcher, nil
+	select {}
 }

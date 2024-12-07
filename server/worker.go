@@ -1,11 +1,9 @@
 package server
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 
-	"github.com/bsach64/goback/utils"
 	"github.com/charmbracelet/log"
 )
 
@@ -26,22 +24,6 @@ func (w *Worker) StartSFTPServer() {
 	}
 
 	rsaPath := filepath.Join(wd, "private", "id_rsa")
-	configPath := filepath.Join(wd, "Directory.json")
-
-	config := readConf(configPath)
-
-	watchDir := filepath.Join(wd, config.Directory)
-
-	if config.Directory != "" {
-		watcher, err := utils.WatchDirectory(watchDir)
-		if err != nil {
-			log.Errorf("Error while creating watcher: %v", err)
-			defer watcher.Close() // Ensure the watcher is cleaned up on server shutdown
-		}
-	} else {
-		log.Info("No directory is being watched you can add using", "command", "Add Directory to Sync")
-	}
-
 	sftpServer := New(w.Ip, rsaPath, w.Port)
 	w.sftpServer = &sftpServer
 

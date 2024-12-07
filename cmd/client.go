@@ -150,15 +150,12 @@ func ClientLoop(cmd *cobra.Command, args []string) {
 			}
 
 		case "Add Directory to Sync":
-			dir, err := promptForDirectory()
+			_, err := promptForDirectory()
 			if err != nil {
 				log.Error("Could not get directory for sync", "err", err)
 				continue
 			}
 
-			if dir == "" {
-				dir = "./files" // Default directory
-			}
 		case "Exit":
 			fmt.Println("Exiting client.")
 			_, _, err := sshC.SendRequest("close-connection", false, []byte(worker.Ip))
