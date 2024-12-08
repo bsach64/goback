@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/bsach64/goback/utils"
 	"github.com/charmbracelet/log"
+	"github.com/fsnotify/fsnotify"
 )
 
 // Worker is just a usual SFTP server that handles the file request
@@ -20,28 +22,15 @@ type Worker struct {
 }
 
 func (w *Worker) StartSFTPServer() {
+	fileWrites := make(map[string]time.Time)
+	delay := 10 * time.Millisecond
+
 	wd, err := os.Getwd()
 	if err != nil {
 		log.Errorf("Cannot get the working directory: %v", err)
 	}
 
 	rsaPath := filepath.Join(wd, "private", "id_rsa")
-	configPath := filepath.Join(wd, "Directory.json")
-
-	config := readConf(configPath)
-
-	watchDir := filepath.Join(wd, config.Directory)
-
-	if config.Directory != "" {
-		watcher, err := utils.WatchDirectory(watchDir)
-		if err != nil {
-			log.Errorf("Error while creating watcher: %v", err)
-			defer watcher.Close() // Ensure the watcher is cleaned up on server shutdown
-		}
-	} else {
-		log.Info("No directory is being watched you can add using", "command", "Add Directory to Sync")
-	}
-
 	sftpServer := New(w.Ip, rsaPath, w.Port)
 	w.sftpServer = &sftpServer
 
@@ -52,42 +41,94 @@ func (w *Worker) StartSFTPServer() {
 		}
 	}()
 
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	go func() {
+		for {
+			select {
+			case event, ok := <-watcher.Events:
+				if !ok {
+					log.Error("Watcher events channel closed")
+					return
+				}
+				if event.Has(fsnotify.Create | fsnotify.Write) {
+					fileWrites[event.Name] = time.Now()
+				}
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					log.Error("Watcher errors channel closed")
+					return
+				}
+				log.Errorf("Watcher error: %v", err)
+			}
+
+			for filename, t := range fileWrites {
+				if time.Since(t) > delay {
+					time.Sleep(delay)
+				}
+				err := reconstruct(wd, filename)
+				if err != nil {
+					log.Error("Could not reconstruct file", filename, "err", err)
+					continue
+				}
+				log.Info("Reconstructed file", filename)
+				delete(fileWrites, filename)
+			}
+		}
+	}()
+
+	err = os.MkdirAll(filepath.Join(wd, ".data", "snapshots"), 0755)
+	if err != nil {
+		watcher.Close()
+		log.Fatalf("failed to create directory for watcher: %v", err)
+	}
+
+	err = watcher.Add(filepath.Join(wd, ".data", "snapshots"))
+	if err != nil {
+		watcher.Close() // Clean up if watcher.Add fails
+		log.Fatalf("failed to add directory to watcher: %v", err)
+	}
+
 	// Keep the worker process alive
 	select {}
 }
 
-type Config struct {
-	Directory string `json:"dir"`
-}
-
-func readConf(path string) Config {
-	config := Config{}
-
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		config.Directory = "./.data"
-		file, err := os.Create(path)
-		if err != nil {
-			log.Fatalf("Failed to create config file: %v", err)
-		}
-		defer file.Close()
-
-		encoder := json.NewEncoder(file)
-		if err := encoder.Encode(config); err != nil {
-			log.Fatalf("Failed to write default config to file: %v", err)
-		}
-		log.Printf("Config file created with default directory: %s", config.Directory)
-	} else {
-		file, err := os.Open(path)
-		if err != nil {
-			log.Fatalf("Failed to open config file: %v", err)
-		}
-		defer file.Close()
-
-		decoder := json.NewDecoder(file)
-		if err := decoder.Decode(&config); err != nil {
-			log.Fatalf("Failed to parse config file: %v", err)
-		}
+func reconstruct(wd, filename string) error {
+	dat, err := os.ReadFile(filename)
+	if err != nil {
+		return err
 	}
 
-	return config
+	var snapshot utils.Snapshot
+	err = json.Unmarshal(dat, &snapshot)
+	if err != nil {
+		return err
+	}
+
+	byteData, err := utils.Reconstruct(snapshot)
+	if err != nil {
+		return err
+	}
+
+	log.Info("BYTES", string(byteData))
+
+	err = os.MkdirAll(filepath.Join(wd, "files"), 0755)
+	if err != nil {
+		return err
+	}
+
+	file, err := os.Create(filepath.Join(wd, snapshot.Filename))
+	if err != nil {
+		return err
+	}
+
+	_, err = file.Write(byteData)
+	if err != nil {
+		return err
+	}
+	log.Info("Recreated: ", "file", filename)
+	return nil
 }
