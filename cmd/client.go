@@ -81,12 +81,7 @@ func ClientLoop(cmd *cobra.Command, args []string) {
 			}
 
 		case "Add Directory to Sync":
-			dir, err := promptForDirectory()
-			if err != nil {
-				log.Error("Could not get directory for sync", "err", err)
-				continue
-			}
-			err = watchAndUpload(dir, sshC, worker)
+			err = watchAndUpload("./files", sshC, worker)
 			if err != nil {
 				log.Error("Watcher with error", "err", err)
 			}
@@ -253,25 +248,6 @@ func SendWorkerDetails(worker server.Worker, sshC *ssh.Client) error {
 	}
 
 	return nil
-}
-
-func promptForDirectory() (string, error) {
-	var directory string
-	directoryPrompt := huh.NewForm(
-		huh.NewGroup(
-			huh.NewInput().
-				Title("Enter Directory to Watch (If it does not exist it will be create)").
-				Prompt("? ").
-				Placeholder("./files").
-				Suggestions([]string{"./files"}).
-				Value(&directory),
-		),
-	)
-	err := directoryPrompt.Run()
-	if err != nil {
-		return "", err
-	}
-	return directory, nil
 }
 
 func promptForIP() (string, error) {
