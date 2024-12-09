@@ -79,7 +79,7 @@ func ClientLoop(cmd *cobra.Command, args []string) {
 				continue
 			}
 
-		case "Add Directory to Sync":
+		case "Sync Directory":
 			err = watchAndUpload("./files", sshC, worker)
 			if err != nil {
 				log.Error("Watcher with error", "err", err)
@@ -272,8 +272,7 @@ func promptForAction() (string, error) {
 				Title("Choose an option:").
 				Options(
 					huh.NewOption("Upload File", "Upload File"),
-					huh.NewOption("List Directory", "List Directory"),
-					huh.NewOption("Add Directory to Sync", "Add Directory to Sync"),
+					huh.NewOption("Sync Directory", "Sync Directory"),
 					huh.NewOption("Exit", "Exit"),
 				).
 				Value(&selectedOption),
